@@ -11,6 +11,9 @@ all: $(EXE)
 prepare:
 	cp ../PairList/pairlist.c .
 	sed -e s/double/float/g ../PairList/pairlist.h > pairlist.h
+clean:
+	-rm *.o *~ $(EXE)
+	-rm */*.o */*.mod
 
 
 
@@ -48,8 +51,6 @@ PPI.ar3r:
 	./matcher $< 12.ar3r 0.03 0.40 > $@
 %.12.match.yap: %.12.match 12.ar3r
 	python3 ./match2yap.py $*.gro 12.ar3r T < $< > $@
-clean:
-	-rm $(ALL)
 %.7+TPPI.yap: %.7.match.yap %.TPPI.match.yap
 	perl ../Yaplot/utils/picklayer.pl 3 < $*.7.match.yap > $@
 	perl ../Yaplot/utils/picklayer.pl 1 < $*.TPPI.match.yap >> $@
