@@ -2,7 +2,7 @@
 
 import numpy as np
 import sys
-from genice import yaplotlib as yp
+import yaplotlib as yp
 
 def LoadGRO(file):
     line = file.readline()
