@@ -6,12 +6,8 @@
 #include "pairlist.h"
 #include "bst.h"
 
-//read Gromacs-type data and find the OH covalent bonds.
+//Find similar coordinations.
 
-//benchmark on vitroid-black 2017-3-31
-//original matcher (no bst):             user	1m28.847s
-//matcher with bst:                      user	1m48.723s
-//matcher with bst (size() is improved): user	1m48.942s
 
 #define max(A,B) ((A)>(B)?(A):(B))
 int
@@ -243,76 +239,76 @@ MakeNeighborList(int natoms, int npairs, int* pairs,
 
 int main(int argc, char* argv[])
 {
-  //usage: matcher grofile error msdmax
-  //typical values: error = 0.03, msdmax == 0.35 for TPPI
-  if ( argc != 5 ){
-    fprintf(stderr, "usage: %s grofile template.ar3a error msdmax\n", argv[0]);
+  //usage: matcher grofile radius(nm) rmsd(nm)
+  //typical values: rmsd == 0.06 nm for TPPI
+  if ( argc != 4 ){
+    fprintf(stderr, "usage: %s grofile radius rmsdmax\n", argv[0]);
     exit(1);
   }
   float cell[3];
   float *Oatoms;
   FILE *file = fopen(argv[1], "r");
-  float err, msdmax;
-  sscanf(argv[3], "%f", &err);
-  sscanf(argv[4], "%f", &msdmax);
+  float err, rmsdmax;
+  sscanf(argv[3], "%f", &rmsdmax);
   int nOatoms = LoadGRO(file, &Oatoms, cell);
   fclose(file);
 
-  float *unitatoms; //relative
-  file = fopen(argv[2], "r");
-  int nunitatoms = LoadAR3A(file, &unitatoms);
-  fclose(file);
-  float rmax = 0;
-  for(int i=0;i<nunitatoms;i++){
-    float r = vector_length(&unitatoms[i*3]);
-    if ( rmax < r ){
-      rmax = r;
-    }
-  }
-  float radius = rmax;
+  float radius = atof(argv[2]);
   fprintf(stderr,"System   %d %f %f %f\n", nOatoms, cell[0], cell[1], cell[2]);
-  fprintf(stderr,"Template %d\n", nunitatoms);
   //Find the tetrahedra of a, b, and c cell vectors
   int* prox;
   //atoms of the proximity
-  fprintf(stderr, "Preparing the neighbor lists.");
-  int nProx   = pairlist(nOatoms, Oatoms, nOatoms, Oatoms, 0.0, radius*(1+err), cell, &prox);
+  fprintf(stderr, "Preparing the neighbor lists...\n");
+  int nProx   = pairlist(nOatoms, Oatoms, nOatoms, Oatoms, 0.0, radius, cell, &prox);
   bnode* nei[nOatoms];
   MakeNeighborList(nOatoms, nProx, prox, nei);
   fprintf(stderr, "Done.\n");
   free(prox);
   fprintf(stderr,"%d nProx A\n", nProx);
-  //find triangle PQR that matches the shape
-  int ntet=0;
-  for(int p=0; p<nOatoms; p++){
+  int N = nOatoms * nOatoms;
+  int intv = 1;
+  if ( N > 10000000 ){
+    //evaluate only 10 M pairs.
+    intv = nOatoms*nOatoms/(2*10000000)+1;
+    fprintf(stderr, "Too many combinations! Will skip every %d to reduce time.\n",intv);
+  }
+  for(int p=0; p<nOatoms; p+=intv){
     fprintf(stderr, "\r%.1f %%", p*100./nOatoms);
     //this does not include p itself!
-    int* neighbors = get_array(nei[p]);
-    neighbors[size(nei[p])] = p; // add itself in place of the useless terminator
-    float msd = 0.0;
-    int partners[nunitatoms];
-    for(int l=0; l<nunitatoms; l++){
-      float u[3];
-      u[0] = unitatoms[l*3+0] + Oatoms[p*3+0];
-      u[1] = unitatoms[l*3+1] + Oatoms[p*3+1];
-      u[2] = unitatoms[l*3+2] + Oatoms[p*3+2];
-      float dmin = 1e99;
-      for(int m=0; m<size(nei[p])+1; m++){
-	float dd[3];
-	int ne = neighbors[m];
-	sub(u, &Oatoms[ne*3], dd);
-	float L = dot(dd,dd);
-	if ( L < dmin ){
-	  dmin = L;
-	  partners[l] = ne;
+    int* pnei = get_array(nei[p]);
+    //for(int jq=0; jq<size(nei[p]); jq++){//q is in proximity of p
+    //  int q = pnei[jq];
+    for(int q=p+1; q<nOatoms; q++){
+      int* qnei = get_array(nei[q]);
+
+      float d[3];
+      //offset between centers
+      sub(&Oatoms[q*3], &Oatoms[p*3], d);
+      float sumsqdev = 0.0;
+      
+      for(int ip=0; ip<size(nei[p]); ip++){
+	float dmin = 1e99;
+	int pn = pnei[ip];
+	for(int iq=0; iq<size(nei[q]); iq++){
+	  int qn = qnei[iq];
+	  float dd[3];
+	  sub(&Oatoms[qn*3], &Oatoms[pn*3], dd);
+	  sub(dd, d, dd);
+	  float L = dot(dd,dd);
+	  if ( L < dmin ){
+	    dmin = L;
+	  }
 	}
+	sumsqdev += dmin;
       }
-      msd += dmin;
+      float msd = sumsqdev / size(nei[p]); //msd in nm**2
+      float rmsd = sqrt(msd);
+      if ( rmsd < rmsdmax ){
+	printf("%d %d %f %f %f %f %f\n", p, q, radius, d[0], d[1], d[2], rmsd);
+      }
+      free(qnei);
     }
-    if ( msd < msdmax * nunitatoms / 100 ){  //msd in AA
-      printf("%d %f %f %f %f\n", p+1, Oatoms[p*3+0]*10, Oatoms[p*3+1]*10, Oatoms[p*3+2]*10, msd);
-    }
-    free(neighbors);
+    free(pnei);
   }
   //dispose memory as soon as possible
   for(int i=0;i<nOatoms; i++){
