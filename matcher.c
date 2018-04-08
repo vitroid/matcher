@@ -17,11 +17,14 @@
 int
 isClose(float x, float y)
 {
+  if ( ( x == 0.0 ) && (y == 0.0)){
+    return TRUE;
+  }
   float e = (x-y)/max(x,y);
   return (-1e-3 < e) && (e < +1e-3);
 }
 
-
+  
 
 
 void
@@ -74,6 +77,12 @@ float vector_length(float* v)
   return sqrt(dot(v,v));
 }
 
+
+float cosine(float *a, float*b){
+  return dot(a,b) / (vector_length(a)*vector_length(b));
+}
+
+
 void
 cross(float*x, float* y, float* z)
 {
@@ -91,6 +100,13 @@ sub(float*x, float* y, float* z)
   }
 }
 
+
+float distance(float*a, float* b)
+{
+  float c[3];
+  sub(a,b,c);
+  return vector_length(c);
+}
 
 void
 mul(float*x, float a, float* z)
@@ -126,6 +142,12 @@ regularize(float* x, float* y, float* z)
     mul(z, -1, z);
   }
 }
+
+int isZeroVector(float* a)
+{
+  return isClose(0.0, vector_length(a));
+}
+
 
 
 float
@@ -286,7 +308,6 @@ int main(int argc, char* argv[])
   file = fopen(argv[2], "r");
   int nunitatoms = LoadAR3R(file, &unitatoms, unitcell);
   fclose(file);
-  //from relative to absolute
   for(int i=0;i<nunitatoms; i++){
     unitatoms[i*3+0] *= unitcell[0];
     unitatoms[i*3+1] *= unitcell[1];
@@ -301,7 +322,7 @@ int main(int argc, char* argv[])
   fprintf(stderr,"Template %d %f %f %f\n", nunitatoms, unitcell[0], unitcell[1], unitcell[2]);
   //Find the tetrahedra of a, b, and c cell vectors
   float a = unitcell[0];
-  //float b   same as a
+  //float b   same as a  BE CAREFUL!
   float c = unitcell[2];
   float ab = sqrt(a*a*2);
   float ac = sqrt(a*a + c*c);
@@ -314,12 +335,13 @@ int main(int argc, char* argv[])
   bnode** neiA = NeighborAtoms(nOatoms, Oatoms, a*(1-err), a*(1+err), cell);
   fprintf(stderr, ".");
   bnode** neiC = NeighborAtoms(nOatoms, Oatoms, c*(1-err), c*(1+err), cell);
-  fprintf(stderr, ".");
-  bnode** neiAB = NeighborAtoms(nOatoms, Oatoms, ab*(1-err), ab*(1+err), cell);
-  fprintf(stderr, ".");
-  bnode** neiAC = NeighborAtoms(nOatoms, Oatoms, ac*(1-err), ac*(1+err), cell);
+  //fprintf(stderr, ".");
+  //bnode** neiAB = NeighborAtoms(nOatoms, Oatoms, ab*(1-err), ab*(1+err), cell);
+  //fprintf(stderr, ".");
+  //bnode** neiAC = NeighborAtoms(nOatoms, Oatoms, ac*(1-err), ac*(1+err), cell);
   fprintf(stderr, "Done.\n");
   //find triangle PQR that matches the shape
+  //There might not be an atom at the origin of the unit cell...2018-4-7
   int ntet=0;
   for(int p=0; p<nOatoms; p++){
     fprintf(stderr, "\r%.1f %%", p*100./nOatoms);
@@ -327,95 +349,112 @@ int main(int argc, char* argv[])
     int* nA = get_array(neiA[p]);
     for(int i=0; i<nnA; i++){
       int q = nA[i];
+      float pq[3];
+      for(int d=0;d<3;d++){
+        pq[d] = Oatoms[q*3+d] - Oatoms[p*3+d];
+        pq[d] -= floor( pq[d] / cell[d] + 0.5 ) * cell[d];
+      }
       for(int j=0; j<nnA; j++){
 	int r = nA[j];
-	if ( lookup(neiAB[q], r) ){
+        float pr[3];
+        for(int d=0;d<3;d++){
+          pr[d] = Oatoms[r*3+d] - Oatoms[p*3+d];
+          pr[d] -= floor( pr[d] / cell[d] + 0.5 ) * cell[d];
+        }
+        float qrL = distance(pq, pr);
+	if ( (ab*(1-err)<qrL) && (qrL<ab*(1+err)) ){
 	  int* nC = get_array(neiC[p]);
 	  int nnC = size(neiC[p]);
 	  for(int k=0; k<nnC; k++){
 	    int s = nC[k];
-	    if ( lookup(neiAC[q], s) && lookup(neiAC[r], s) ){
-	      float dq[3], dr[3], ds[3];
-	      for(int d=0;d<3;d++){
-		dq[d] = Oatoms[q*3+d] - Oatoms[p*3+d];
-		dq[d] -= floor( dq[d] / cell[d] + 0.5 ) * cell[d];
-		dr[d] = Oatoms[r*3+d] - Oatoms[p*3+d];
-		dr[d] -= floor( dr[d] / cell[d] + 0.5 ) * cell[d];
-		ds[d] = Oatoms[s*3+d] - Oatoms[p*3+d];
-		ds[d] -= floor( ds[d] / cell[d] + 0.5 ) * cell[d];
-	      }
-	      //mathcing without alignment.
-	      //find the rotation matrix from 
-	      //A is the unit cell
-	      //B is the unit cell in the atomic configuration
-	      //R is the rotation for A
-	      //Assume A and B has common origin. i.e. no translation
-	      //Then, if both A and B are not distorted,
-	      //B = RA, i.e. R = B A^-1
-	      //if A and B are stacks of row vectors,
-	      //B = AR, i.e. R = A^-1 B
-	      //In reality, R wont be a regular rotation matrix, so we have to regularize it.
-	      //Here is a simple idea.
-	      //http://stackoverflow.com/questions/23080791/eigen-re-orthogonalization-of-rotation-matrix
-	      //In the present case, unit cell is orthogonal, so inverse is trivial.
-	      //Assume A and B are row vectors
-	      float Rx[3], Ry[3], Rz[3];
-	      mul(dq, unitcelli[0], Rx);
-	      mul(dr, unitcelli[1], Ry);
-	      mul(ds, unitcelli[2], Rz);
-	      regularize(Rx,Ry,Rz);
-	      float Tx[3],Ty[3],Tz[3];
-	      Tx[0] = Rx[0];
-	      Tx[1] = Ry[0];
-	      Tx[2] = Rz[0];
-	      Ty[0] = Rx[1];
-	      Ty[1] = Ry[1];
-	      Ty[2] = Rz[1];
-	      Tz[0] = Rx[2];
-	      Tz[1] = Ry[2];
-	      Tz[2] = Rz[2];
-	      //We get R' by regularization, and B' = A R'
-	      //float ARx[3], ARy[3], ARz[3];
-	      //mul(Rx, unitcell[0], ARx);
-	      //mul(Ry, unitcell[1], ARy);
-	      //mul(Rz, unitcell[2], ARz);
-	      //this does not include p itself!
-	      int* neighbors = get_array(nei[p]);
-	      neighbors[size(nei[p])] = p; // add itself in place of the useless terminator
-	      float msd = 0.0;
-	      int partners[nunitatoms];
-	      for(int l=0; l<nunitatoms; l++){
-		float u[3];
-		u[0] = dot(&unitatoms[l*3], Tx) + Oatoms[p*3+0];
-		u[1] = dot(&unitatoms[l*3], Ty) + Oatoms[p*3+1];
-		u[2] = dot(&unitatoms[l*3], Tz) + Oatoms[p*3+2];
-		float dmin = 1e99;
-		for(int m=0; m<size(nei[p])+1; m++){
-		  float dd[3];
-		  int ne = neighbors[m];
-		  sub(u, &Oatoms[ne*3], dd);
-		  float L = dot(dd,dd);
-		  if ( L < dmin ){
-		    dmin = L;
-		    partners[l] = ne;
-		  }
-		}
-		msd += dmin;
-	      }
-	      if ( msd / nunitatoms * 100 < msdmax ){  //msd in AA
-		printf("%d ", nunitatoms);
-		for(int l=0;l<nunitatoms;l++){
-		  printf("%d ", partners[l]);
-		}
-		printf("%f %d ", msd, p);//error and the origin atom
-		printf("%f %f %f ", Rx[0],Rx[1],Rx[2]);
-		printf("%f %f %f ", Ry[0],Ry[1],Ry[2]);
-		printf("%f %f %f\n", Rz[0],Rz[1],Rz[2]);
-
-		
-	      }
-	      free(neighbors);
-		  
+            float ps[3];
+            for(int d=0;d<3;d++){
+              ps[d] = Oatoms[s*3+d] - Oatoms[p*3+d];
+              ps[d] -= floor( ps[d] / cell[d] + 0.5 ) * cell[d];
+            }
+            float qsL = distance(pq, ps);
+            float rsL = distance(pr, ps);
+            if ( (ac*(1-err)<qsL) && (qsL<ac*(1+err)) && (ac*(1-err)<rsL) && (rsL<ac*(1+err)) ){
+              int error = 0;
+              if ( ! error ){
+                //mathcing without alignment.
+                //find the rotation matrix from 
+                //A is the unit cell
+                //B is the unit cell in the atomic configuration
+                //R is the rotation for A
+                //Assume A and B has common origin. i.e. no translation
+                //Then, if both A and B are not distorted,
+                //B = RA, i.e. R = B A^-1
+                //if A and B are stacks of row vectors,
+                //B = AR, i.e. R = A^-1 B
+                //In reality, R wont be a regular rotation matrix, so we have to regularize it.
+                //Here is a simple idea.
+                //http://stackoverflow.com/questions/23080791/eigen-re-orthogonalization-of-rotation-matrix
+                //In the present case, unit cell is orthogonal, so inverse is trivial.
+                //Assume A and B are row vectors
+                float Rx[3], Ry[3], Rz[3];
+                mul(pq, unitcelli[0], Rx);
+                mul(pr, unitcelli[1], Ry);
+                mul(ps, unitcelli[2], Rz);
+                regularize(Rx,Ry,Rz);
+                // check if it is really a unitary.
+                float t1[3];
+                cross(Rx,Ry,t1);
+                float vol = dot(t1,Rz);
+                //fprintf(stderr, "%f %f %f\n", vector_length(pq)/a, vector_length(pr)/a, vector_length(qr)/ab);
+                //fprintf(stderr, "%f %f %f\n", cosine(pq,pr), cosine(pr,ps), cosine(ps,pq));
+                //fprintf(stderr, "%f %f %f %f\n", cosine(Rx,Ry), cosine(Ry,Rz), cosine(Rz,Rx), vol);
+                float Tx[3],Ty[3],Tz[3];
+                Tx[0] = Rx[0];
+                Tx[1] = Ry[0];
+                Tx[2] = Rz[0];
+                Ty[0] = Rx[1];
+                Ty[1] = Ry[1];
+                Ty[2] = Rz[1];
+                Tz[0] = Rx[2];
+                Tz[1] = Ry[2];
+                Tz[2] = Rz[2];
+                //We get R' by regularization, and B' = A R'
+                //float ARx[3], ARy[3], ARz[3];
+                //mul(Rx, unitcell[0], ARx);
+                //mul(Ry, unitcell[1], ARy);
+                //mul(Rz, unitcell[2], ARz);
+                //this does not include p itself!
+                int* neighbors = get_array(nei[p]);
+                neighbors[size(nei[p])] = p; // add itself in place of the useless terminator
+                float msd = 0.0;
+                int partners[nunitatoms];
+                for(int l=0; l<nunitatoms; l++){
+                  float u[3];
+                  u[0] = dot(&unitatoms[l*3], Tx) + Oatoms[p*3+0];
+                  u[1] = dot(&unitatoms[l*3], Ty) + Oatoms[p*3+1];
+                  u[2] = dot(&unitatoms[l*3], Tz) + Oatoms[p*3+2];
+                  float dmin = 1e99;
+                  for(int m=0; m<size(nei[p])+1; m++){
+                    float dd[3];
+                    int ne = neighbors[m];
+                    sub(u, &Oatoms[ne*3], dd);
+                    float L = dot(dd,dd);
+                    if ( L < dmin ){
+                      dmin = L;
+                      partners[l] = ne;
+                    }
+                  }
+                  msd += dmin;
+                }
+                msd = msd / nunitatoms * 100;
+                if ( msd < msdmax ){  //msd in AA
+                  printf("%d ", nunitatoms);
+                  for(int l=0;l<nunitatoms;l++){
+                    printf("%d ", partners[l]);
+                  }
+                  printf("%f %d ", msd, p);//error and the origin atom
+                  printf("%f %f %f ", Rx[0],Rx[1],Rx[2]);
+                  printf("%f %f %f ", Ry[0],Ry[1],Ry[2]);
+                  printf("%f %f %f\n", Rz[0],Rz[1],Rz[2]);
+                }
+                free(neighbors);
+              } // if ( !error )		  
 	      ntet += 1;
 	    }
 	  }
@@ -430,8 +469,8 @@ int main(int argc, char* argv[])
     dispose(nei[i]);
     dispose(neiA[i]);
     dispose(neiC[i]);
-    dispose(neiAB[i]);
-    dispose(neiAC[i]);
+    //dispose(neiAB[i]);
+    //dispose(neiAC[i]);
   }
   fprintf(stderr,"%d ntet\n", ntet);
 
