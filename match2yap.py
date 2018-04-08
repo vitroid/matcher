@@ -119,14 +119,23 @@ s += drawbox(origin,Cell,halfshift=False)
 #s = ""
 palette = dict()
 matched = set()
-for nline,line in enumerate(sys.stdin):
+nline = 0
+while True:
+    line = sys.stdin.readline()
+    if len(line) == 0:
+        break
+    nline += 1
     #parse the line
     cols = line.split()
+    if len(cols) < 13:
+        break
     msd     = float(cols[0])
     Origin  = Oatoms[int(cols[1])].copy()  #atom at the matching center
     center  = int(cols[2])
     rotmat  = np.array([float(x) for x in cols[3:12]]).reshape((3,3))
     N = int(cols[12])
+    if len(cols) < 13+N:
+        break
     members = [int(x) for x in cols[13:N+13]]
     #draw matched box
 
