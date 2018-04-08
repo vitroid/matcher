@@ -221,8 +221,6 @@ LoadAR3R(FILE* file, float** atoms, float* cell){
       fgets( line, sizeof(line), file);
       nAtoms = atoi(line);
       *atoms = (float*) malloc( sizeof(float) * nAtoms*3 );
-      float dmin = 1e99;
-      int   imin = -1;
       for(int i=0;i<nAtoms;i++){
 	fgets(line, sizeof(line), file);
 	float x,y,z;
@@ -231,21 +229,9 @@ LoadAR3R(FILE* file, float** atoms, float* cell){
 	x -= floor(x+0.5);
 	y -= floor(y+0.5);
 	z -= floor(z+0.5);
-	float rr = x*x + y*y + z*z;
-	if ( rr < dmin ){
-	  dmin = rr;
-	  imin = i;
-	}
 	(*atoms)[i*3+0] = x;
 	(*atoms)[i*3+1] = y;
 	(*atoms)[i*3+2] = z;
-      }
-      //there must be a molecule at the origin
-      fprintf(stderr,"shift: %f %f %f\n",  (*atoms)[imin*3+0], (*atoms)[imin*3+1], (*atoms)[imin*3+2]);
-      for(int i=0;i<nAtoms;i++){
-	(*atoms)[i*3+0] -= (*atoms)[imin*3+0];
-	(*atoms)[i*3+1] -= (*atoms)[imin*3+1];
-	(*atoms)[i*3+2] -= (*atoms)[imin*3+2];
       }
     }
   }
@@ -308,11 +294,12 @@ int main(int argc, char* argv[])
   file = fopen(argv[2], "r");
   int nunitatoms = LoadAR3R(file, &unitatoms, unitcell);
   fclose(file);
+  /*
   for(int i=0;i<nunitatoms; i++){
     unitatoms[i*3+0] *= unitcell[0];
     unitatoms[i*3+1] *= unitcell[1];
     unitatoms[i*3+2] *= unitcell[2];
-  }
+    }*/
   assert(isClose(unitcell[0], unitcell[1]));
   float radius = vector_length(unitcell)/2;
   for(int d=0;d<3;d++){
@@ -335,10 +322,6 @@ int main(int argc, char* argv[])
   bnode** neiA = NeighborAtoms(nOatoms, Oatoms, a*(1-err), a*(1+err), cell);
   fprintf(stderr, ".");
   bnode** neiC = NeighborAtoms(nOatoms, Oatoms, c*(1-err), c*(1+err), cell);
-  //fprintf(stderr, ".");
-  //bnode** neiAB = NeighborAtoms(nOatoms, Oatoms, ab*(1-err), ab*(1+err), cell);
-  //fprintf(stderr, ".");
-  //bnode** neiAC = NeighborAtoms(nOatoms, Oatoms, ac*(1-err), ac*(1+err), cell);
   fprintf(stderr, "Done.\n");
   //find triangle PQR that matches the shape
   //There might not be an atom at the origin of the unit cell...2018-4-7
@@ -404,6 +387,7 @@ int main(int argc, char* argv[])
                 //fprintf(stderr, "%f %f %f\n", vector_length(pq)/a, vector_length(pr)/a, vector_length(qr)/ab);
                 //fprintf(stderr, "%f %f %f\n", cosine(pq,pr), cosine(pr,ps), cosine(ps,pq));
                 //fprintf(stderr, "%f %f %f %f\n", cosine(Rx,Ry), cosine(Ry,Rz), cosine(Rz,Rx), vol);
+                //transposition
                 float Tx[3],Ty[3],Tz[3];
                 Tx[0] = Rx[0];
                 Tx[1] = Ry[0];
@@ -422,48 +406,66 @@ int main(int argc, char* argv[])
                 //this does not include p itself!
                 int* neighbors = get_array(nei[p]);
                 neighbors[size(nei[p])] = p; // add itself in place of the useless terminator
-                float msd = 0.0;
-                int partners[nunitatoms];
-                for(int l=0; l<nunitatoms; l++){
-                  float u[3];
-                  u[0] = dot(&unitatoms[l*3], Tx) + Oatoms[p*3+0];
-                  u[1] = dot(&unitatoms[l*3], Ty) + Oatoms[p*3+1];
-                  u[2] = dot(&unitatoms[l*3], Tz) + Oatoms[p*3+2];
-                  float dmin = 1e99;
-                  for(int m=0; m<size(nei[p])+1; m++){
-                    float dd[3];
-                    int ne = neighbors[m];
-                    sub(u, &Oatoms[ne*3], dd);
-                    float L = dot(dd,dd);
-                    if ( L < dmin ){
-                      dmin = L;
-                      partners[l] = ne;
+                // loop with center atoms
+                for(int center=0; center<nunitatoms; center++){
+                  //slide unit cell to the position of p
+                  //with rotation
+                  float slidunit[nunitatoms*3];
+                  for(int l=0; l<nunitatoms; l++){
+                    float rel[3];
+                    for(int d=0; d<3; d++){
+                      rel[d] = unitatoms[l*3+d]-unitatoms[center*3+d];
+                      rel[d] -= floor(rel[d]+0.5);
+                      rel[d] *= unitcell[d];
                     }
+                    //affine transformation.
+                    //Move and rotate center to p
+                    slidunit[l*3+0] = dot(rel, Tx) + Oatoms[p*3+0];
+                    slidunit[l*3+1] = dot(rel, Ty) + Oatoms[p*3+1];
+                    slidunit[l*3+2] = dot(rel, Tz) + Oatoms[p*3+2];
+                  }                       
+                  float msd = 0.0;
+                  int partners[nunitatoms];
+                  for(int l=0; l<nunitatoms; l++){
+                    float dmin = 1e99;
+                    for(int m=0; m<size(nei[p])+1; m++){
+                      int ne = neighbors[m];
+                      float dd[3];
+                      sub(&slidunit[l*3], &Oatoms[ne*3], dd);
+                      //PBC should be here
+                      float L = dot(dd,dd);
+                      if ( L < dmin ){
+                        dmin = L;
+                        partners[l] = ne;
+                      }
+                    }
+                    msd += dmin;
                   }
-                  msd += dmin;
-                }
-                msd = msd / nunitatoms * 100;
-                if ( msd < msdmax ){  //msd in AA
-                  printf("%d ", nunitatoms);
-                  for(int l=0;l<nunitatoms;l++){
-                    printf("%d ", partners[l]);
-                  }
-                  printf("%f %d ", msd, p);//error and the origin atom
-                  printf("%f %f %f ", Rx[0],Rx[1],Rx[2]);
-                  printf("%f %f %f ", Ry[0],Ry[1],Ry[2]);
-                  printf("%f %f %f\n", Rz[0],Rz[1],Rz[2]);
-                }
+                  msd = msd / nunitatoms * 100;
+                  if ( msd < msdmax ){  //msd in AA
+                    printf("%f ", msd);//error
+                    printf("%d %d ", p, center);//center in gro, center in init (CHANGED)
+                    printf("%f %f %f ", Rx[0],Rx[1],Rx[2]);
+                    printf("%f %f %f ", Ry[0],Ry[1],Ry[2]);
+                    printf("%f %f %f ", Rz[0],Rz[1],Rz[2]);
+                    printf("%d ", nunitatoms);
+                    for(int l=0;l<nunitatoms;l++){
+                      printf("%d ", partners[l]);
+                    }
+                    printf("\n");
+                  } //if(range)
+                } // for (center )
                 free(neighbors);
               } // if ( !error )		  
 	      ntet += 1;
-	    }
-	  }
+	    } //if(range)
+	  } //for(k)
 	  free(nC);
-	}
-      }
-    }
+	} //if(range)
+      } //for(j)
+    } //for(i)
     free(nA);
-  }
+  } // for(p)
   //dispose memory as soon as possible
   for(int i=0;i<nOatoms; i++){
     dispose(nei[i]);
