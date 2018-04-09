@@ -9,9 +9,9 @@
 //read Gromacs-type data and find the OH covalent bonds.
 
 //benchmark on vitroid-black 2017-3-31
-//original matcher (no bst):             user	1m28.847s
-//matcher with bst:                      user	1m48.723s
-//matcher with bst (size() is improved): user	1m48.942s
+//original matcher (no bst):             user    1m28.847s
+//matcher with bst:                      user    1m48.723s
+//matcher with bst (size() is improved): user    1m48.942s
 
 #define max(A,B) ((A)>(B)?(A):(B))
 int
@@ -221,31 +221,17 @@ LoadAR3R(FILE* file, float** atoms, float* cell){
       fgets( line, sizeof(line), file);
       nAtoms = atoi(line);
       *atoms = (float*) malloc( sizeof(float) * nAtoms*3 );
-      float dmin = 1e99;
-      int   imin = -1;
       for(int i=0;i<nAtoms;i++){
-	fgets(line, sizeof(line), file);
-	float x,y,z;
-	sscanf(line, "%f %f %f", &x, &y, &z);
-	//atoms distribute around the origin.
-	x -= floor(x+0.5);
-	y -= floor(y+0.5);
-	z -= floor(z+0.5);
-	float rr = x*x + y*y + z*z;
-	if ( rr < dmin ){
-	  dmin = rr;
-	  imin = i;
-	}
-	(*atoms)[i*3+0] = x;
-	(*atoms)[i*3+1] = y;
-	(*atoms)[i*3+2] = z;
-      }
-      //there must be a molecule at the origin
-      fprintf(stderr,"shift: %f %f %f\n",  (*atoms)[imin*3+0], (*atoms)[imin*3+1], (*atoms)[imin*3+2]);
-      for(int i=0;i<nAtoms;i++){
-	(*atoms)[i*3+0] -= (*atoms)[imin*3+0];
-	(*atoms)[i*3+1] -= (*atoms)[imin*3+1];
-	(*atoms)[i*3+2] -= (*atoms)[imin*3+2];
+        fgets(line, sizeof(line), file);
+        float x,y,z;
+        sscanf(line, "%f %f %f", &x, &y, &z);
+        //atoms distribute around the origin.
+        x -= floor(x+0.5);
+        y -= floor(y+0.5);
+        z -= floor(z+0.5);
+        (*atoms)[i*3+0] = x;
+        (*atoms)[i*3+1] = y;
+        (*atoms)[i*3+2] = z;
       }
     }
   }
@@ -255,8 +241,8 @@ LoadAR3R(FILE* file, float** atoms, float* cell){
 
 void
 MakeNeighborList(int natoms, int npairs, int* pairs, 
-		 //return values
-		 bnode** nei)
+         //return values
+         bnode** nei)
 {
   //make neighborlist
   for(int i=0;i<natoms; i++){
@@ -284,36 +270,75 @@ NeighborAtoms(int nAtoms, float* Atoms, float lower, float upper, float* cell)
 }
 
 
+void usage(char *cmd)
+{
+  fprintf(stderr, "usage: %s [-e error][-v msdmax][-a] grofile template.ar3r error msdmax\n", cmd);
+  fprintf(stderr, " -e error   Allowance for p,q,r vectors (0.03)\n");
+  fprintf(stderr, " -v value   Upper bound for MSD (1.00)\n");
+  fprintf(stderr, " -a         Automatic densityadjustment\n");
+  exit(1);
+}
 
 int main(int argc, char* argv[])
 {
-  //usage: matcher grofile error msdmax
-  //typical values: error = 0.03, msdmax == 0.35 for TPPI
-  if ( argc != 5 ){
-    fprintf(stderr, "usage: %s grofile template.ar3r error msdmax\n", argv[0]);
-    exit(1);
+  /*
+    usage: matcher grofile error msdmax
+
+    groファイルで構造データが与えられる。また、単位胞が別に与えられる。
+    まず、ある原子pから、a軸の距離にある点q、b軸の距離にある点r、c軸の距離にある点sをさがす。(この時の距離の遊びがerror値)
+    qr距離が|a-b|にほぼ一致し、qs距離が|a-c|にほぼ一致し、rs距離が|b-c|にほぼ一致するなら、そこには単位胞とおなじ周期構造がある可能性がある。
+    そこで単位胞のなかから1原子centerを選び、それがpになるように、そして単位胞の基本
+ベクトルがpq, pr, psに平行になるように単位胞を空間配置する。
+単位胞の各原子に最も近い、構造データ内の原子をさがしだし、その対応表を出力する。
+    これを、p,q,r,s,centerに関して繰り返す。
+  */
+
+  int arg = 1;
+  float err = 0.03;
+  float msdmax = 1.00;
+  int adjdens = 0;
+  while( argv[arg][0] == '-' ){
+    if ( 0 == strncmp(argv[arg], "-e", 2) ){
+      sscanf(argv[arg+1], "%f", &err);
+      arg += 2;
+    }
+    else if ( 0 == strncmp(argv[arg], "-v", 2) ){
+      sscanf(argv[arg+1], "%f", &msdmax);
+      arg += 2;
+    }
+    else if ( 0 == strncmp(argv[arg], "-a", 2) ){
+      adjdens = 1;
+      arg += 1;
+    }
+    else {
+      usage(argv[0]);
+    }
+  }      
+  if ( arg +2 != argc ){
+    usage(argv[0]);
   }
   float cell[3];
   float *Oatoms;
-  FILE *file = fopen(argv[1], "r");
-  float err, msdmax;
-  sscanf(argv[3], "%f", &err);
-  sscanf(argv[4], "%f", &msdmax);
+  FILE *file = fopen(argv[arg], "r");
   int nOatoms = LoadGRO(file, &Oatoms, cell);
   fclose(file);
+  float dens0 = nOatoms / (cell[0]*cell[1]*cell[2]);
 
   float unitcell[3];
   float unitcelli[3];
   float *unitatoms; //relative
-  file = fopen(argv[2], "r");
+  file = fopen(argv[arg+1], "r");
   int nunitatoms = LoadAR3R(file, &unitatoms, unitcell);
   fclose(file);
-  for(int i=0;i<nunitatoms; i++){
-    unitatoms[i*3+0] *= unitcell[0];
-    unitatoms[i*3+1] *= unitcell[1];
-    unitatoms[i*3+2] *= unitcell[2];
+  float dens1 = nunitatoms / (unitcell[0]*unitcell[1]*unitcell[2]);
+  if (adjdens){
+    float ratio = powf(dens1 / dens0, 1./3.);
+    unitcell[0] *= ratio;
+    unitcell[1] *= ratio;
+    unitcell[2] *= ratio;
   }
-  assert(isClose(unitcell[0], unitcell[1]));
+    
+  //直方体セル以外に拡張することも容易だが、そこはまた必要が生じた時に。
   float radius = vector_length(unitcell)/2;
   for(int d=0;d<3;d++){
     unitcelli[d] = 1.0/unitcell[d];
@@ -322,23 +347,22 @@ int main(int argc, char* argv[])
   fprintf(stderr,"Template %d %f %f %f\n", nunitatoms, unitcell[0], unitcell[1], unitcell[2]);
   //Find the tetrahedra of a, b, and c cell vectors
   float a = unitcell[0];
-  //float b   same as a  BE CAREFUL!
+  float b = unitcell[1];
   float c = unitcell[2];
-  float ab = sqrt(a*a*2);
+  float ab = sqrt(a*a + b*b);
   float ac = sqrt(a*a + c*c);
+  float bc = sqrt(b*b + c*c);
   //atoms of the proximity
   fprintf(stderr, "Preparing the neighbor lists.");
   fprintf(stderr,".");
   bnode** nei = NeighborAtoms(nOatoms, Oatoms, 0.0, radius*(1+err), cell);
-  //pair lists
+  //prepare pair lists
   fprintf(stderr, ".");
   bnode** neiA = NeighborAtoms(nOatoms, Oatoms, a*(1-err), a*(1+err), cell);
   fprintf(stderr, ".");
+  bnode** neiB = NeighborAtoms(nOatoms, Oatoms, b*(1-err), b*(1+err), cell);
+  fprintf(stderr, ".");
   bnode** neiC = NeighborAtoms(nOatoms, Oatoms, c*(1-err), c*(1+err), cell);
-  //fprintf(stderr, ".");
-  //bnode** neiAB = NeighborAtoms(nOatoms, Oatoms, ab*(1-err), ab*(1+err), cell);
-  //fprintf(stderr, ".");
-  //bnode** neiAC = NeighborAtoms(nOatoms, Oatoms, ac*(1-err), ac*(1+err), cell);
   fprintf(stderr, "Done.\n");
   //find triangle PQR that matches the shape
   //There might not be an atom at the origin of the unit cell...2018-4-7
@@ -347,6 +371,10 @@ int main(int argc, char* argv[])
     fprintf(stderr, "\r%.1f %%", p*100./nOatoms);
     int nnA = size(neiA[p]);
     int* nA = get_array(neiA[p]);
+    int nnB = size(neiB[p]);
+    int* nB = get_array(neiB[p]);
+    int nnC = size(neiC[p]);
+    int* nC = get_array(neiC[p]);
     for(int i=0; i<nnA; i++){
       int q = nA[i];
       float pq[3];
@@ -354,19 +382,17 @@ int main(int argc, char* argv[])
         pq[d] = Oatoms[q*3+d] - Oatoms[p*3+d];
         pq[d] -= floor( pq[d] / cell[d] + 0.5 ) * cell[d];
       }
-      for(int j=0; j<nnA; j++){
-	int r = nA[j];
+      for(int j=0; j<nnB; j++){
+        int r = nB[j];
         float pr[3];
         for(int d=0;d<3;d++){
           pr[d] = Oatoms[r*3+d] - Oatoms[p*3+d];
           pr[d] -= floor( pr[d] / cell[d] + 0.5 ) * cell[d];
         }
         float qrL = distance(pq, pr);
-	if ( (ab*(1-err)<qrL) && (qrL<ab*(1+err)) ){
-	  int* nC = get_array(neiC[p]);
-	  int nnC = size(neiC[p]);
-	  for(int k=0; k<nnC; k++){
-	    int s = nC[k];
+        if ( (ab*(1-err)<qrL) && (qrL<ab*(1+err)) ){
+          for(int k=0; k<nnC; k++){
+            int s = nC[k];
             float ps[3];
             for(int d=0;d<3;d++){
               ps[d] = Oatoms[s*3+d] - Oatoms[p*3+d];
@@ -375,8 +401,6 @@ int main(int argc, char* argv[])
             float qsL = distance(pq, ps);
             float rsL = distance(pr, ps);
             if ( (ac*(1-err)<qsL) && (qsL<ac*(1+err)) && (ac*(1-err)<rsL) && (rsL<ac*(1+err)) ){
-              int error = 0;
-              if ( ! error ){
                 //mathcing without alignment.
                 //find the rotation matrix from 
                 //A is the unit cell
@@ -398,12 +422,13 @@ int main(int argc, char* argv[])
                 mul(ps, unitcelli[2], Rz);
                 regularize(Rx,Ry,Rz);
                 // check if it is really a unitary.
-                float t1[3];
-                cross(Rx,Ry,t1);
-                float vol = dot(t1,Rz);
+                //float t1[3];
+                //cross(Rx,Ry,t1);
+                //float vol = dot(t1,Rz);
                 //fprintf(stderr, "%f %f %f\n", vector_length(pq)/a, vector_length(pr)/a, vector_length(qr)/ab);
                 //fprintf(stderr, "%f %f %f\n", cosine(pq,pr), cosine(pr,ps), cosine(ps,pq));
                 //fprintf(stderr, "%f %f %f %f\n", cosine(Rx,Ry), cosine(Ry,Rz), cosine(Rz,Rx), vol);
+                //transposition 転置
                 float Tx[3],Ty[3],Tz[3];
                 Tx[0] = Rx[0];
                 Tx[1] = Ry[0];
@@ -422,55 +447,76 @@ int main(int argc, char* argv[])
                 //this does not include p itself!
                 int* neighbors = get_array(nei[p]);
                 neighbors[size(nei[p])] = p; // add itself in place of the useless terminator
-                float msd = 0.0;
-                int partners[nunitatoms];
-                for(int l=0; l<nunitatoms; l++){
-                  float u[3];
-                  u[0] = dot(&unitatoms[l*3], Tx) + Oatoms[p*3+0];
-                  u[1] = dot(&unitatoms[l*3], Ty) + Oatoms[p*3+1];
-                  u[2] = dot(&unitatoms[l*3], Tz) + Oatoms[p*3+2];
-                  float dmin = 1e99;
-                  for(int m=0; m<size(nei[p])+1; m++){
-                    float dd[3];
-                    int ne = neighbors[m];
-                    sub(u, &Oatoms[ne*3], dd);
-                    float L = dot(dd,dd);
-                    if ( L < dmin ){
-                      dmin = L;
-                      partners[l] = ne;
+                // loop with center atoms
+                // 単位胞の原子centerをpの位置に平行移動して重ねる。
+                // 計算量が増える分、errを小さくしても見落しが少なくなるはず。
+                for(int center=0; center<nunitatoms; center++){
+                  //slide unit cell to the position of p
+                  //with rotation
+                  float slidunit[nunitatoms*3];
+                  for(int l=0; l<nunitatoms; l++){
+                    float rel[3];
+                    for(int d=0; d<3; d++){
+                      rel[d] = unitatoms[l*3+d]-unitatoms[center*3+d];
+                      rel[d] -= floor(rel[d]+0.5);
+                      rel[d] *= unitcell[d];
                     }
+                    //affine transformation.
+                    //Move and rotate center to p
+                    slidunit[l*3+0] = dot(rel, Tx) + Oatoms[p*3+0];
+                    slidunit[l*3+1] = dot(rel, Ty) + Oatoms[p*3+1];
+                    slidunit[l*3+2] = dot(rel, Tz) + Oatoms[p*3+2];
+                  }                       
+                  float msd = 0.0;
+                  int partners[nunitatoms];
+                  for(int l=0; l<nunitatoms; l++){
+                    float dmin = 1e99;
+                    for(int m=0; m<size(nei[p])+1; m++){
+                      int ne = neighbors[m];
+                      float dd[3];
+                      sub(&slidunit[l*3], &Oatoms[ne*3], dd);
+                      //PBC should be here
+                      float L = dot(dd,dd);
+                      if ( L < dmin ){
+                        dmin = L;
+                        partners[l] = ne;
+                      }
+                    }
+                    msd += dmin;
                   }
-                  msd += dmin;
-                }
-                msd = msd / nunitatoms * 100;
-                if ( msd < msdmax ){  //msd in AA
-                  printf("%d ", nunitatoms);
-                  for(int l=0;l<nunitatoms;l++){
-                    printf("%d ", partners[l]);
-                  }
-                  printf("%f %d ", msd, p);//error and the origin atom
-                  printf("%f %f %f ", Rx[0],Rx[1],Rx[2]);
-                  printf("%f %f %f ", Ry[0],Ry[1],Ry[2]);
-                  printf("%f %f %f\n", Rz[0],Rz[1],Rz[2]);
-                }
-                free(neighbors);
-              } // if ( !error )		  
-	      ntet += 1;
-	    }
-	  }
-	  free(nC);
-	}
-      }
-    }
+                  msd = msd / nunitatoms * 100;
+                  if ( msd < msdmax ){  //msd in AA
+                    // 出力の順番が変更になった。
+                    // match2yap.pyもそれに対応させる。
+                    printf("%f ", msd);//error
+                    printf("%d %d ", p, center);//center in gro, center in init (CHANGED)
+                    printf("%f %f %f ", Rx[0],Rx[1],Rx[2]);
+                    printf("%f %f %f ", Ry[0],Ry[1],Ry[2]);
+                    printf("%f %f %f ", Rz[0],Rz[1],Rz[2]);
+                    printf("%d ", nunitatoms);
+                    for(int l=0;l<nunitatoms;l++){
+                      printf("%d ", partners[l]);
+                    }
+                    printf("\n");
+		  } // for (center )
+		} // if ( !error )          
+		free(neighbors);
+		ntet += 1;
+            } //if(range)
+          } //for(k)
+        } //if(range)
+      } //for(j)
+    } //for(i)
     free(nA);
-  }
+    free(nB);
+    free(nC);
+  } // for(p)
   //dispose memory as soon as possible
   for(int i=0;i<nOatoms; i++){
     dispose(nei[i]);
     dispose(neiA[i]);
+    dispose(neiB[i]);
     dispose(neiC[i]);
-    //dispose(neiAB[i]);
-    //dispose(neiAC[i]);
   }
   fprintf(stderr,"%d ntet\n", ntet);
 
