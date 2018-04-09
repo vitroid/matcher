@@ -95,15 +95,27 @@ def drawatoms(atoms, members=None):
             s += yp.Circle(atoms[i])
     return s
 
+def usage():
+    print("usage: {0} [-e every][-v maxval] traj.gro pattern.ar3r < matcher.output")
+    sys.exit(1)
+    
 every = 1
-if sys.argv[1] == "-e":
-    every = int(sys.argv[2])
-    sys.argv.pop(1)
-    sys.argv.pop(1)
+maxval = 1.0
+while sys.argv[1][0] == "-":
+    if sys.argv[1] == "-e":
+        every = int(sys.argv[2])
+        sys.argv.pop(1)
+        sys.argv.pop(1)
+    elif sys.argv[1] == "-v":
+        maxval = float(sys.argv[2])
+        sys.argv.pop(1)
+        sys.argv.pop(1)
+    else:
+        usage()
     
 Cell, Oatoms = LoadGRO(open(sys.argv[1]))  # in AA, in AA
 Unitcell, unitatoms = LoadAR3R(open(sys.argv[2])) # in AA, in rel
-mode = "R"
+mode = ""
 if len(sys.argv) > 3:
     mode = sys.argv[3]
 
@@ -161,8 +173,9 @@ while True:
     if color not in palette:
         palette[color] = len(palette)+5
         s += yp.SetPalette(palette[color],color[0]*255//3,color[1]*255//3,color[2]*255//3)
-    matched |= set(members)
-    if every != 0 and nline % every == 0:
+    if msd < maxval:
+        matched |= set(members)
+    if every != 0 and nline % every == 0 and msd < maxval:
         s += yp.Color(palette[color])
         # matched box
         s += yp.Layer(4)

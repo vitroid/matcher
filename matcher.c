@@ -270,30 +270,74 @@ NeighborAtoms(int nAtoms, float* Atoms, float lower, float upper, float* cell)
 }
 
 
+void usage(char *cmd)
+{
+  fprintf(stderr, "usage: %s [-e error][-v msdmax][-a] grofile template.ar3r error msdmax\n", cmd);
+  fprintf(stderr, " -e error   Allowance for p,q,r vectors (0.03)\n");
+  fprintf(stderr, " -v value   Upper bound for MSD (1.00)\n");
+  fprintf(stderr, " -a         Automatic densityadjustment\n");
+  exit(1);
+}
 
 int main(int argc, char* argv[])
 {
-  //usage: matcher grofile error msdmax
-  //typical values: error = 0.03, msdmax == 0.35 for TPPI
-  if ( argc != 5 ){
-    fprintf(stderr, "usage: %s grofile template.ar3r error msdmax\n", argv[0]);
-    exit(1);
+  /*
+    usage: matcher grofile error msdmax
+
+    groファイルで構造データが与えられる。また、単位胞が別に与えられる。
+    まず、ある原子pから、a軸の距離にある点q、b軸の距離にある点r、c軸の距離にある点sをさがす。(この時の距離の遊びがerror値)
+    qr距離が|a-b|にほぼ一致し、qs距離が|a-c|にほぼ一致し、rs距離が|b-c|にほぼ一致するなら、そこには単位胞とおなじ周期構造がある可能性がある。
+    そこで単位胞のなかから1原子centerを選び、それがpになるように、そして単位胞の基本
+ベクトルがpq, pr, psに平行になるように単位胞を空間配置する。
+単位胞の各原子に最も近い、構造データ内の原子をさがしだし、その対応表を出力する。
+    これを、p,q,r,s,centerに関して繰り返す。
+  */
+
+  int arg = 1;
+  float err = 0.03;
+  float msdmax = 1.00;
+  int adjdens = 0;
+  while( argv[arg][0] == '-' ){
+    if ( 0 == strncmp(argv[arg], "-e", 2) ){
+      sscanf(argv[arg+1], "%f", &err);
+      arg += 2;
+    }
+    else if ( 0 == strncmp(argv[arg], "-v", 2) ){
+      sscanf(argv[arg+1], "%f", &msdmax);
+      arg += 2;
+    }
+    else if ( 0 == strncmp(argv[arg], "-a", 2) ){
+      adjdens = 1;
+      arg += 1;
+    }
+    else {
+      usage(argv[0]);
+    }
+  }      
+  if ( arg +2 != argc ){
+    usage(argv[0]);
   }
   float cell[3];
   float *Oatoms;
-  FILE *file = fopen(argv[1], "r");
-  float err, msdmax;
-  sscanf(argv[3], "%f", &err);
-  sscanf(argv[4], "%f", &msdmax);
+  FILE *file = fopen(argv[arg], "r");
   int nOatoms = LoadGRO(file, &Oatoms, cell);
   fclose(file);
+  float dens0 = nOatoms / (cell[0]*cell[1]*cell[2]);
 
   float unitcell[3];
   float unitcelli[3];
   float *unitatoms; //relative
-  file = fopen(argv[2], "r");
+  file = fopen(argv[arg+1], "r");
   int nunitatoms = LoadAR3R(file, &unitatoms, unitcell);
   fclose(file);
+  float dens1 = nunitatoms / (unitcell[0]*unitcell[1]*unitcell[2]);
+  if (adjdens){
+    float ratio = powf(dens1 / dens0, 1./3.);
+    unitcell[0] *= ratio;
+    unitcell[1] *= ratio;
+    unitcell[2] *= ratio;
+  }
+    
   //直方体セル以外に拡張することも容易だが、そこはまた必要が生じた時に。
   float radius = vector_length(unitcell)/2;
   for(int d=0;d<3;d++){
@@ -454,10 +498,10 @@ int main(int argc, char* argv[])
                       printf("%d ", partners[l]);
                     }
                     printf("\n");
-                } // for (center )
-                free(neighbors);
-              } // if ( !error )          
-              ntet += 1;
+		  } // for (center )
+		} // if ( !error )          
+		free(neighbors);
+		ntet += 1;
             } //if(range)
           } //for(k)
         } //if(range)
