@@ -129,6 +129,7 @@ while True:
     cols = line.split()
     if len(cols) < 13:
         break
+    # 2018-4-9 New output format of matcher.c
     msd     = float(cols[0])
     Origin  = Oatoms[int(cols[1])].copy()  #atom at the matching center
     center  = int(cols[2])
@@ -144,8 +145,6 @@ while True:
     rel -= np.floor(rel+0.5)
     # rel to abs
     Slid = np.dot(rel, Unitcell)
-    # print(Slid)
-    # sys.exit(0)
     # rotate box
     RotUnitcell       = np.dot(Unitcell, rotmat)
     # 

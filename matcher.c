@@ -305,7 +305,7 @@ int main(int argc, char* argv[])
   float a = unitcell[0];
   float b = unitcell[1];
   float c = unitcell[2];
-  float ab = sqrt(a*a + b*b;
+  float ab = sqrt(a*a + b*b);
   float ac = sqrt(a*a + c*c);
   float bc = sqrt(b*b + c*c);
   //atoms of the proximity
