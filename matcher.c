@@ -5,6 +5,7 @@
 #include <assert.h>
 #include "pairlist.h"
 #include "bst.h"
+#include "common.h"
 
 //read Gromacs-type data and find the OH covalent bonds.
 
@@ -15,12 +16,12 @@
 
 #define max(A,B) ((A)>(B)?(A):(B))
 int
-isClose(float x, float y)
+isClose(double x, double y)
 {
   if ( ( x == 0.0 ) && (y == 0.0)){
     return TRUE;
   }
-  float e = (x-y)/max(x,y);
+  double e = (x-y)/max(x,y);
   return (-1e-3 < e) && (e < +1e-3);
 }
 
@@ -28,63 +29,27 @@ isClose(float x, float y)
 
 
 void
-yaplot_linerel(float* a, float* d)
+yaplot_linerel(double* a, double* d)
 {
   printf("l %f %f %f %f %f %f\n", a[0],a[1],a[2], a[0]+d[0],a[1]+d[1], a[2]+d[2]);
 }
 
-int
-LoadGRO(FILE* file, float** Oatoms, float* cell){
-  int nAtoms, nOatoms;
-  char line[1024];
-  fgets( line, sizeof(line), file);
-  fgets( line, sizeof(line), file);
-  nAtoms = atoi(line);
-  nOatoms = 0;
-  *Oatoms = (float*) malloc( sizeof(float) * nAtoms*3 );
-  for(int i=0;i<nAtoms;i++){
-    fgets(line, sizeof(line), file);
-    float x,y,z;
-    int   id;
-    char  label[99],label2[99];
-    sscanf(line, "%10s%5s%5d%8f%8f%8f\n", label, label2, &id, &x, &y, &z);
-    if ( label2[0] == 'O' ){
-      (*Oatoms)[nOatoms*3+0] = x;
-      (*Oatoms)[nOatoms*3+1] = y;
-      (*Oatoms)[nOatoms*3+2] = z;
-      nOatoms ++;
-    }
-  }
-  //assert(nOatoms==nAtoms/3);
-  fgets(line, sizeof(line), file);
-  sscanf(line, "%f %f %f\n", &cell[0], &cell[1], &cell[2]);
-  return nOatoms;
-}
 
-
-float dot(float* x, float* y)
-{
-  float sum =0;
-  for(int d=0;d<3;d++){
-    sum += x[d]*y[d];
-  }
-  return sum;
-}
 
   
-float vector_length(float* v)
+double vector_length(double* v)
 {
   return sqrt(dot(v,v));
 }
 
 
-float cosine(float *a, float*b){
+double cosine(double *a, double*b){
   return dot(a,b) / (vector_length(a)*vector_length(b));
 }
 
 
 void
-cross(float*x, float* y, float* z)
+cross(double*x, double* y, double* z)
 {
   z[0] = x[1]*y[2] - x[2]*y[1];
   z[1] = x[2]*y[0] - x[0]*y[2];
@@ -92,24 +57,16 @@ cross(float*x, float* y, float* z)
 }
 
 
-void
-sub(float*x, float* y, float* z)
-{
-  for(int d=0;d<3;d++){
-    z[d] = x[d] -y[d];
-  }
-}
 
-
-float distance(float*a, float* b)
+double distance(double*a, double* b)
 {
-  float c[3];
+  double c[3];
   sub(a,b,c);
   return vector_length(c);
 }
 
 void
-mul(float*x, float a, float* z)
+mul(double*x, double a, double* z)
 {
   for(int d=0;d<3;d++){
     z[d] = x[d] * a;
@@ -118,21 +75,21 @@ mul(float*x, float a, float* z)
 
 
 void
-regularize(float* x, float* y, float* z)
+regularize(double* x, double* y, double* z)
 {
-  float z0[3];
+  double z0[3];
   for(int d=0;d<3;d++)
     z0[d] = z[d];
-  float error = dot(x,y);
-  float ye[3];
+  double error = dot(x,y);
+  double ye[3];
   mul(y,error/2,ye);
-  float x_ort[3];
+  double x_ort[3];
   sub(x,ye,x_ort);
-  float xe[3];
+  double xe[3];
   mul(x,error/2,xe);
-  float y_ort[3];
+  double y_ort[3];
   sub(y,xe,y_ort);
-  float z_ort[3];
+  double z_ort[3];
   cross(x_ort, y_ort, z_ort);
   mul(x_ort, 0.5*(3.0-dot(x_ort,x_ort)), x);
   mul(y_ort, 0.5*(3.0-dot(y_ort,y_ort)), y);
@@ -143,28 +100,28 @@ regularize(float* x, float* y, float* z)
   }
 }
 
-int isZeroVector(float* a)
+int isZeroVector(double* a)
 {
   return isClose(0.0, vector_length(a));
 }
 
 
 
-float
-det(float* A, float* B, float* C)
+double
+det(double* A, double* B, double* C)
 {
   // Ax Bx Cx   a b c
   // Ay By Cy = d e f
   // Az Bz Cz   g h k
-  float a = A[0];
-  float b = B[0];
-  float c = C[0];
-  float d = A[1];
-  float e = B[1];
-  float f = C[1];
-  float g = A[2];
-  float h = B[2];
-  float k = C[2];
+  double a = A[0];
+  double b = B[0];
+  double c = C[0];
+  double d = A[1];
+  double e = B[1];
+  double f = C[1];
+  double g = A[2];
+  double h = B[2];
+  double k = C[2];
   return a * (e * k - f * h) - b * (d * k - f * g) + c * (d * h - e * g);
 }
 
@@ -173,21 +130,21 @@ det(float* A, float* B, float* C)
 
 
 void
-inv(float* A, float* B, float* C)
+inv(double* A, double* B, double* C)
 {
   // Ax Bx Cx   a b c
   // Ay By Cy = d e f
   // Az Bz Cz   g h k
-  float D = det(A,B,C);
-  float a = A[0];
-  float b = B[0];
-  float c = C[0];
-  float d = A[1];
-  float e = B[1];
-  float f = C[1];
-  float g = A[2];
-  float h = B[2];
-  float k = C[2];
+  double D = det(A,B,C);
+  double a = A[0];
+  double b = B[0];
+  double c = C[0];
+  double d = A[1];
+  double e = B[1];
+  double f = C[1];
+  double g = A[2];
+  double h = B[2];
+  double k = C[2];
   A[0] =  (e * k - f * h) / D;
   B[0] = -(b * k - c * h) / D;
   C[0] =  (b * f - c * e) / D;
@@ -206,13 +163,13 @@ inv(float* A, float* B, float* C)
 
 
 int
-LoadAR3R(FILE* file, float** atoms, float* cell){
+LoadAR3R(FILE* file, double** atoms, double* cell){
   int nAtoms;
   char line[1024];
   while ( NULL != fgets( line, sizeof(line), file) ){
     if ( 0 == strncmp(line, "@BOX3", 5) ){
       fgets( line, sizeof(line), file);
-      sscanf(line, "%f %f %f\n", &cell[0], &cell[1], &cell[2]);
+      sscanf(line, "%lf %lf %lf\n", &cell[0], &cell[1], &cell[2]);
       cell[0] /= 10; //in nm, for gromacs
       cell[1] /= 10;
       cell[2] /= 10;
@@ -220,11 +177,11 @@ LoadAR3R(FILE* file, float** atoms, float* cell){
     else if ( 0 == strncmp(line, "@AR3R", 5) ){
       fgets( line, sizeof(line), file);
       nAtoms = atoi(line);
-      *atoms = (float*) malloc( sizeof(float) * nAtoms*3 );
+      *atoms = (double*) malloc( sizeof(double) * nAtoms*3 );
       for(int i=0;i<nAtoms;i++){
         fgets(line, sizeof(line), file);
-        float x,y,z;
-        sscanf(line, "%f %f %f", &x, &y, &z);
+        double x,y,z;
+        sscanf(line, "%lf %lf %lf", &x, &y, &z);
         //atoms distribute around the origin.
         x -= floor(x+0.5);
         y -= floor(y+0.5);
@@ -239,27 +196,11 @@ LoadAR3R(FILE* file, float** atoms, float* cell){
 }
 
 
-void
-MakeNeighborList(int natoms, int npairs, int* pairs, 
-         //return values
-         bnode** nei)
-{
-  //make neighborlist
-  for(int i=0;i<natoms; i++){
-    nei[i] = NULL;
-  }
-  for(int i=0;i<npairs;i++){
-    int r0 = pairs[i*2+0];
-    int r1 = pairs[i*2+1];
-    nei[r0] = insert(nei[r0], r1);
-    nei[r1] = insert(nei[r1], r0);
-  }
-}
 
 
 
 bnode**
-NeighborAtoms(int nAtoms, float* Atoms, float lower, float upper, float* cell)
+NeighborAtoms(int nAtoms, double* Atoms, double lower, double upper, double* cell)
 {
   int* prox;
   int nProx   = pairlist(nAtoms, Atoms, nAtoms, Atoms, lower, upper, cell, &prox);
@@ -294,16 +235,16 @@ int main(int argc, char* argv[])
   */
 
   int arg = 1;
-  float err = 0.03;
-  float msdmax = 1.00;
+  double err = 0.03;
+  double msdmax = 1.00;
   int adjdens = 0;
   while( argv[arg][0] == '-' ){
     if ( 0 == strncmp(argv[arg], "-e", 2) ){
-      sscanf(argv[arg+1], "%f", &err);
+      sscanf(argv[arg+1], "%lf", &err);
       arg += 2;
     }
     else if ( 0 == strncmp(argv[arg], "-v", 2) ){
-      sscanf(argv[arg+1], "%f", &msdmax);
+      sscanf(argv[arg+1], "%lf", &msdmax);
       arg += 2;
     }
     else if ( 0 == strncmp(argv[arg], "-a", 2) ){
@@ -317,41 +258,41 @@ int main(int argc, char* argv[])
   if ( arg +2 != argc ){
     usage(argv[0]);
   }
-  float cell[3];
-  float *Oatoms;
+  double cell[3];
+  double *Oatoms;
   FILE *file = fopen(argv[arg], "r");
   int nOatoms = LoadGRO(file, &Oatoms, cell);
   fclose(file);
-  float dens0 = nOatoms / (cell[0]*cell[1]*cell[2]);
+  double dens0 = nOatoms / (cell[0]*cell[1]*cell[2]);
 
-  float unitcell[3];
-  float unitcelli[3];
-  float *unitatoms; //relative
+  double unitcell[3];
+  double unitcelli[3];
+  double *unitatoms; //relative
   file = fopen(argv[arg+1], "r");
   int nunitatoms = LoadAR3R(file, &unitatoms, unitcell);
   fclose(file);
-  float dens1 = nunitatoms / (unitcell[0]*unitcell[1]*unitcell[2]);
+  double dens1 = nunitatoms / (unitcell[0]*unitcell[1]*unitcell[2]);
   if (adjdens){
-    float ratio = powf(dens1 / dens0, 1./3.);
+    double ratio = powf(dens1 / dens0, 1./3.);
     unitcell[0] *= ratio;
     unitcell[1] *= ratio;
     unitcell[2] *= ratio;
   }
     
   //直方体セル以外に拡張することも容易だが、そこはまた必要が生じた時に。
-  float radius = vector_length(unitcell)/2;
+  double radius = vector_length(unitcell)/2;
   for(int d=0;d<3;d++){
     unitcelli[d] = 1.0/unitcell[d];
   }
   fprintf(stderr,"System   %d %f %f %f\n", nOatoms, cell[0], cell[1], cell[2]);
   fprintf(stderr,"Template %d %f %f %f\n", nunitatoms, unitcell[0], unitcell[1], unitcell[2]);
   //Find the tetrahedra of a, b, and c cell vectors
-  float a = unitcell[0];
-  float b = unitcell[1];
-  float c = unitcell[2];
-  float ab = sqrt(a*a + b*b);
-  float ac = sqrt(a*a + c*c);
-  float bc = sqrt(b*b + c*c);
+  double a = unitcell[0];
+  double b = unitcell[1];
+  double c = unitcell[2];
+  double ab = sqrt(a*a + b*b);
+  double ac = sqrt(a*a + c*c);
+  double bc = sqrt(b*b + c*c);
   //atoms of the proximity
   fprintf(stderr, "Preparing the neighbor lists.");
   fprintf(stderr,".");
@@ -377,29 +318,29 @@ int main(int argc, char* argv[])
     int* nC = get_array(neiC[p]);
     for(int i=0; i<nnA; i++){
       int q = nA[i];
-      float pq[3];
+      double pq[3];
       for(int d=0;d<3;d++){
         pq[d] = Oatoms[q*3+d] - Oatoms[p*3+d];
         pq[d] -= floor( pq[d] / cell[d] + 0.5 ) * cell[d];
       }
       for(int j=0; j<nnB; j++){
         int r = nB[j];
-        float pr[3];
+        double pr[3];
         for(int d=0;d<3;d++){
           pr[d] = Oatoms[r*3+d] - Oatoms[p*3+d];
           pr[d] -= floor( pr[d] / cell[d] + 0.5 ) * cell[d];
         }
-        float qrL = distance(pq, pr);
+        double qrL = distance(pq, pr);
         if ( (ab*(1-err)<qrL) && (qrL<ab*(1+err)) ){
           for(int k=0; k<nnC; k++){
             int s = nC[k];
-            float ps[3];
+            double ps[3];
             for(int d=0;d<3;d++){
               ps[d] = Oatoms[s*3+d] - Oatoms[p*3+d];
               ps[d] -= floor( ps[d] / cell[d] + 0.5 ) * cell[d];
             }
-            float qsL = distance(pq, ps);
-            float rsL = distance(pr, ps);
+            double qsL = distance(pq, ps);
+            double rsL = distance(pr, ps);
             if ( (ac*(1-err)<qsL) && (qsL<ac*(1+err)) && (ac*(1-err)<rsL) && (rsL<ac*(1+err)) ){
                 //mathcing without alignment.
                 //find the rotation matrix from 
@@ -416,20 +357,20 @@ int main(int argc, char* argv[])
                 //http://stackoverflow.com/questions/23080791/eigen-re-orthogonalization-of-rotation-matrix
                 //In the present case, unit cell is orthogonal, so inverse is trivial.
                 //Assume A and B are row vectors
-                float Rx[3], Ry[3], Rz[3];
+                double Rx[3], Ry[3], Rz[3];
                 mul(pq, unitcelli[0], Rx);
                 mul(pr, unitcelli[1], Ry);
                 mul(ps, unitcelli[2], Rz);
                 regularize(Rx,Ry,Rz);
                 // check if it is really a unitary.
-                //float t1[3];
+                //double t1[3];
                 //cross(Rx,Ry,t1);
-                //float vol = dot(t1,Rz);
+                //double vol = dot(t1,Rz);
                 //fprintf(stderr, "%f %f %f\n", vector_length(pq)/a, vector_length(pr)/a, vector_length(qr)/ab);
                 //fprintf(stderr, "%f %f %f\n", cosine(pq,pr), cosine(pr,ps), cosine(ps,pq));
                 //fprintf(stderr, "%f %f %f %f\n", cosine(Rx,Ry), cosine(Ry,Rz), cosine(Rz,Rx), vol);
                 //transposition 転置
-                float Tx[3],Ty[3],Tz[3];
+                double Tx[3],Ty[3],Tz[3];
                 Tx[0] = Rx[0];
                 Tx[1] = Ry[0];
                 Tx[2] = Rz[0];
@@ -440,7 +381,7 @@ int main(int argc, char* argv[])
                 Tz[1] = Ry[2];
                 Tz[2] = Rz[2];
                 //We get R' by regularization, and B' = A R'
-                //float ARx[3], ARy[3], ARz[3];
+                //double ARx[3], ARy[3], ARz[3];
                 //mul(Rx, unitcell[0], ARx);
                 //mul(Ry, unitcell[1], ARy);
                 //mul(Rz, unitcell[2], ARz);
@@ -453,9 +394,9 @@ int main(int argc, char* argv[])
                 for(int center=0; center<nunitatoms; center++){
                   //slide unit cell to the position of p
                   //with rotation
-                  float slidunit[nunitatoms*3];
+                  double slidunit[nunitatoms*3];
                   for(int l=0; l<nunitatoms; l++){
-                    float rel[3];
+                    double rel[3];
                     for(int d=0; d<3; d++){
                       rel[d] = unitatoms[l*3+d]-unitatoms[center*3+d];
                       rel[d] -= floor(rel[d]+0.5);
@@ -467,16 +408,16 @@ int main(int argc, char* argv[])
                     slidunit[l*3+1] = dot(rel, Ty) + Oatoms[p*3+1];
                     slidunit[l*3+2] = dot(rel, Tz) + Oatoms[p*3+2];
                   }                       
-                  float msd = 0.0;
+                  double msd = 0.0;
                   int partners[nunitatoms];
                   for(int l=0; l<nunitatoms; l++){
-                    float dmin = 1e99;
+                    double dmin = 1e99;
                     for(int m=0; m<size(nei[p])+1; m++){
                       int ne = neighbors[m];
-                      float dd[3];
+                      double dd[3];
                       sub(&slidunit[l*3], &Oatoms[ne*3], dd);
                       //PBC should be here
-                      float L = dot(dd,dd);
+                      double L = dot(dd,dd);
                       if ( L < dmin ){
                         dmin = L;
                         partners[l] = ne;

@@ -1,3 +1,6 @@
+#ifndef BST_H
+#define BST_H
+
 #define TRUE 1
 #define FALSE 0
 
@@ -17,3 +20,5 @@ int*   put_in_array(bnode* root, int* array);
 int*   get_array(bnode* root);
 void   dispose(bnode* root);
 void   view(bnode* root);
+
+#endif
