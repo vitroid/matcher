@@ -14,8 +14,9 @@ with codecs.open(os.path.join(os.path.dirname(__file__), 'smatcher.py'),
                  encoding='utf8') as version_file:
     metadata = dict(re.findall(r"""__([a-z]+)__ = "([^"]+)""", version_file.read()))
 
-setup(ext_modules=[Extension("csmatcher", ["csmatcher.c", "smatcher.c", "bst.c", "common.c", "pairlist.c"])],
-      headers=["pairlist.h", "common.h", "bst.h", "smatcher.h"],
+setup(ext_modules=[Extension("csmatcher", ["csmatcher.c", "smatcher.c", "bst.c", "common.c", "pairlist.c"]),
+                   Extension("cmatcher", ["cmatcher.c", "matcher.c", "bst.c", "common.c", "pairlist.c"])],
+      headers=["pairlist.h", "common.h", "bst.h", "smatcher.h", "matcher.h"],
       include_dirs=get_numpy_include_dirs(),
       name='matcher',
       version=metadata['version'],

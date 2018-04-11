@@ -6,6 +6,7 @@
 #include "pairlist.h"
 #include "bst.h"
 #include "common.h"
+#include "matcher.h"
 
 //read Gromacs-type data and find the OH covalent bonds.
 
@@ -26,13 +27,6 @@ isClose(double x, double y)
 }
 
   
-
-
-void
-yaplot_linerel(double* a, double* d)
-{
-  printf("l %f %f %f %f %f %f\n", a[0],a[1],a[2], a[0]+d[0],a[1]+d[1], a[2]+d[2]);
-}
 
 
 
@@ -100,10 +94,6 @@ regularize(double* x, double* y, double* z)
   }
 }
 
-int isZeroVector(double* a)
-{
-  return isClose(0.0, vector_length(a));
-}
 
 
 
@@ -211,74 +201,38 @@ NeighborAtoms(int nAtoms, double* Atoms, double lower, double upper, double* cel
 }
 
 
-void usage(char *cmd)
+
+
+
+int match_len(matchtype* s)
 {
-  fprintf(stderr, "usage: %s [-e error][-v msdmax][-a] grofile template.ar3r error msdmax\n", cmd);
-  fprintf(stderr, " -e error   Allowance for p,q,r vectors (0.03)\n");
-  fprintf(stderr, " -v value   Upper bound for MSD (1.00)\n");
-  fprintf(stderr, " -a         Automatic densityadjustment\n");
-  exit(1);
+  int n=0;
+  while ( s != NULL ){
+    n += 1;
+    s = s->next;
+  }
+  return n;
 }
 
-int main(int argc, char* argv[])
+
+
+matchtype* matcher_core(int nOatoms, double* Oatoms,
+			double cell[3],
+			int nunitatoms, double* unitatoms,
+			double unitcell[3],
+			double err,
+			double rmsdmax,
+			int adjdens )
 {
-  /*
-    usage: matcher grofile error msdmax
-
-    groファイルで構造データが与えられる。また、単位胞が別に与えられる。
-    まず、ある原子pから、a軸の距離にある点q、b軸の距離にある点r、c軸の距離にある点sをさがす。(この時の距離の遊びがerror値)
-    qr距離が|a-b|にほぼ一致し、qs距離が|a-c|にほぼ一致し、rs距離が|b-c|にほぼ一致するなら、そこには単位胞とおなじ周期構造がある可能性がある。
-    そこで単位胞のなかから1原子centerを選び、それがpになるように、そして単位胞の基本
-ベクトルがpq, pr, psに平行になるように単位胞を空間配置する。
-単位胞の各原子に最も近い、構造データ内の原子をさがしだし、その対応表を出力する。
-    これを、p,q,r,s,centerに関して繰り返す。
-  */
-
-  int arg = 1;
-  double err = 0.03;
-  double msdmax = 1.00;
-  int adjdens = 0;
-  while( argv[arg][0] == '-' ){
-    if ( 0 == strncmp(argv[arg], "-e", 2) ){
-      sscanf(argv[arg+1], "%lf", &err);
-      arg += 2;
-    }
-    else if ( 0 == strncmp(argv[arg], "-v", 2) ){
-      sscanf(argv[arg+1], "%lf", &msdmax);
-      arg += 2;
-    }
-    else if ( 0 == strncmp(argv[arg], "-a", 2) ){
-      adjdens = 1;
-      arg += 1;
-    }
-    else {
-      usage(argv[0]);
-    }
-  }      
-  if ( arg +2 != argc ){
-    usage(argv[0]);
-  }
-  double cell[3];
-  double *Oatoms;
-  FILE *file = fopen(argv[arg], "r");
-  int nOatoms = LoadGRO(file, &Oatoms, cell);
-  fclose(file);
   double dens0 = nOatoms / (cell[0]*cell[1]*cell[2]);
-
-  double unitcell[3];
-  double unitcelli[3];
-  double *unitatoms; //relative
-  file = fopen(argv[arg+1], "r");
-  int nunitatoms = LoadAR3R(file, &unitatoms, unitcell);
-  fclose(file);
   double dens1 = nunitatoms / (unitcell[0]*unitcell[1]*unitcell[2]);
   if (adjdens){
-    double ratio = powf(dens1 / dens0, 1./3.);
+    double ratio = pow(dens1 / dens0, 1./3.);
     unitcell[0] *= ratio;
     unitcell[1] *= ratio;
     unitcell[2] *= ratio;
   }
-    
+  double unitcelli[3];
   //直方体セル以外に拡張することも容易だが、そこはまた必要が生じた時に。
   double radius = vector_length(unitcell)/2;
   for(int d=0;d<3;d++){
@@ -286,6 +240,16 @@ int main(int argc, char* argv[])
   }
   fprintf(stderr,"System   %d %f %f %f\n", nOatoms, cell[0], cell[1], cell[2]);
   fprintf(stderr,"Template %d %f %f %f\n", nunitatoms, unitcell[0], unitcell[1], unitcell[2]);
+  fprintf(stderr, "%f %f %d\n", err, rmsdmax, adjdens);
+  fprintf(stderr, "\n");
+  for(int i=0;i<nunitatoms;i++){
+    fprintf(stderr, "%f %f %f\n", Oatoms[i*3+0], Oatoms[i*3+1], Oatoms[i*3+2]);
+  }
+  fprintf(stderr, "\n");
+  for(int i=0;i<nunitatoms;i++){
+    fprintf(stderr, "%f %f %f\n", unitatoms[i*3+0], unitatoms[i*3+1], unitatoms[i*3+2]);
+  }
+  fprintf(stderr, "\n");
   //Find the tetrahedra of a, b, and c cell vectors
   double a = unitcell[0];
   double b = unitcell[1];
@@ -308,6 +272,7 @@ int main(int argc, char* argv[])
   //find triangle PQR that matches the shape
   //There might not be an atom at the origin of the unit cell...2018-4-7
   int ntet=0;
+  matchtype* match = NULL;
   for(int p=0; p<nOatoms; p++){
     fprintf(stderr, "\r%.1f %%", p*100./nOatoms);
     int nnA = size(neiA[p]);
@@ -341,7 +306,7 @@ int main(int argc, char* argv[])
             }
             double qsL = distance(pq, ps);
             double rsL = distance(pr, ps);
-            if ( (ac*(1-err)<qsL) && (qsL<ac*(1+err)) && (ac*(1-err)<rsL) && (rsL<ac*(1+err)) ){
+            if ( (ac*(1-err)<qsL) && (qsL<ac*(1+err)) && (bc*(1-err)<rsL) && (rsL<bc*(1+err)) ){
                 //mathcing without alignment.
                 //find the rotation matrix from 
                 //A is the unit cell
@@ -425,20 +390,24 @@ int main(int argc, char* argv[])
                     }
                     msd += dmin;
                   }
-                  msd = msd / nunitatoms * 100;
-                  if ( msd < msdmax ){  //msd in AA
-                    // 出力の順番が変更になった。
-                    // match2yap.pyもそれに対応させる。
-                    printf("%f ", msd);//error
-                    printf("%d %d ", p, center);//center in gro, center in init (CHANGED)
-                    printf("%f %f %f ", Rx[0],Rx[1],Rx[2]);
-                    printf("%f %f %f ", Ry[0],Ry[1],Ry[2]);
-                    printf("%f %f %f ", Rz[0],Rz[1],Rz[2]);
-                    printf("%d ", nunitatoms);
+                  double rmsd = sqrt(msd / nunitatoms);
+                  if ( rmsd < rmsdmax ){
+		    matchtype* m = (matchtype*) malloc (sizeof(matchtype));
+		    m->rmsd = rmsd;
+		    m->atom_gro = p;
+		    m->atom_unitcell = center;
+		    for(int o=0;o<3; o++){
+		      m->mat[o+0] = Rx[o];
+		      m->mat[o+3] = Ry[o];
+		      m->mat[o+6] = Rz[o];
+		    }
+		    m->natom= nunitatoms;
+		    m->atoms = (int*) malloc (sizeof(int)*nunitatoms);
                     for(int l=0;l<nunitatoms;l++){
-                      printf("%d ", partners[l]);
+		      m->atoms[l] = partners[l];
                     }
-                    printf("\n");
+		    m->next = match;
+		    match = m;
 		  } // for (center )
 		} // if ( !error )          
 		free(neighbors);
@@ -460,10 +429,97 @@ int main(int argc, char* argv[])
     dispose(neiC[i]);
   }
   fprintf(stderr,"%d ntet\n", ntet);
+  fprintf(stderr, "%d nmatch\n", match_len(match));
 
   free(Oatoms);
+  return match;
 }
 
+
+
+
+
+void usage(char *cmd)
+{
+  fprintf(stderr, "usage: %s [-e error][-v rmsdmax][-a] grofile template.ar3r error rmsdmax\n", cmd);
+  fprintf(stderr, " -e error   Allowance for p,q,r vectors (0.03)\n");
+  fprintf(stderr, " -v value   Upper bound for root mean square displacement (RMSD) (1.00)\n");
+  fprintf(stderr, " -a         Automatic densityadjustment\n");
+  exit(1);
+}
+
+
+int main(int argc, char* argv[])
+{
+  /*
+    usage: matcher grofile error rmsdmax
+
+    groファイルで構造データが与えられる。また、単位胞が別に与えられる。
+    まず、ある原子pから、a軸の距離にある点q、b軸の距離にある点r、c軸の距離にある点sをさがす。(この時の距離の遊びがerror値)
+    qr距離が|a-b|にほぼ一致し、qs距離が|a-c|にほぼ一致し、rs距離が|b-c|にほぼ一致するなら、そこには単位胞とおなじ周期構造がある可能性がある。
+    そこで単位胞のなかから1原子centerを選び、それがpになるように、そして単位胞の基本
+ベクトルがpq, pr, psに平行になるように単位胞を空間配置する。
+単位胞の各原子に最も近い、構造データ内の原子をさがしだし、その対応表を出力する。
+    これを、p,q,r,s,centerに関して繰り返す。
+  */
+
+  int arg = 1;
+  double err = 0.03;
+  double rmsdmax = 1.00;
+  int adjdens = 0;
+  while( argv[arg][0] == '-' ){
+    if ( 0 == strncmp(argv[arg], "-e", 2) ){
+      sscanf(argv[arg+1], "%lf", &err);
+      arg += 2;
+    }
+    else if ( 0 == strncmp(argv[arg], "-v", 2) ){
+      sscanf(argv[arg+1], "%lf", &rmsdmax);
+      arg += 2;
+    }
+    else if ( 0 == strncmp(argv[arg], "-a", 2) ){
+      adjdens = 1;
+      arg += 1;
+    }
+    else {
+      usage(argv[0]);
+    }
+  }      
+  if ( arg +2 != argc ){
+    usage(argv[0]);
+  }
+  double cell[3];
+  double *Oatoms;
+  FILE *file = fopen(argv[arg], "r");
+  int nOatoms = LoadGRO(file, &Oatoms, cell);
+  fclose(file);
+
+  double unitcell[3];
+  double *unitatoms; //relative
+  file = fopen(argv[arg+1], "r");
+  int nunitatoms = LoadAR3R(file, &unitatoms, unitcell);
+  fclose(file);
+
+  matchtype* match = matcher_core(nOatoms,    Oatoms,    cell,
+				  nunitatoms, unitatoms, unitcell,
+				  err,
+				  rmsdmax,
+				  adjdens);
+  while ( match != NULL ){
+    matchtype* m = match;
+    printf("%f %d %d ", m->rmsd, m->atom_gro, m->atom_unitcell);
+    for(int i=0;i<9; i++){
+      printf("%f ", m->mat[i]);
+    }
+    printf("%d ", m->natom);
+    for(int i=0; i<m->natom;i++){
+      printf("%d ", m->atoms[i]);
+    }
+    printf("\n");
+    match = m->next;
+    free(m->atoms);
+    free(m);
+  }
+}
 
 
 

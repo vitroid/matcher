@@ -15,3 +15,11 @@ slide-matcher
 slide-matcher2
 
 *.gro
+
+*.ar3r
+
+@
+
+*.egg
+
+matcher\.egg-info/
