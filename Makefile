@@ -17,10 +17,11 @@ all: $(EXE)
 prepare:
 	cp ../PairList/pairlist.[ch] .
 clean:
-	-rm *.o *~ $(EXE)
-	-rm */*.o */*.mod
+	-rm *.o *~ $(EXE) @ @@ @@@ @@@@
+	-rm */*.o */*.mod 
 	-rm *.so
-	-rm -rf build
+	-rm -rf build *.egg-info dist
+	-rm *.gro *.ar3r *.match *.smatch
 
 #python
 check:
@@ -45,12 +46,16 @@ install: matcher.py
 1c.gro:
 	genice 1c -r 1 1 1 -d 0.8 > $@
 test:
-	./smatcher 7.gro 0.8 0.06 
+	./smatcher 7.gro 0.8 0.06 > test.smatch
 test2:
-	python ./smatcher.py 7.gro 8.0 0.06
+	python ./smatcher.py 7.gro 8.0 0.06 > test2.smatch
 test3:
-	./matcher -e 0.03 -v 0.06 7.gro 1c.ar3r
+	./matcher -e 0.03 -v 0.06 7.gro 1c.ar3r > test3.1c.match
 test4:
-	python ./matcher.py 7.gro 1c.gro 0.03 0.06
-test5:
-	genice 7 -r 6 6 6 --dens 1.6 -f matcher[1c.gro:0.03:0.06:0] 
+	python ./matcher.py 7.gro 1c.gro 0.03 0.06 > test4.1c.match
+test5: 7.1c.match
+7.1c.match: 1c.gro
+	genice 7 -r 6 6 6 --dens 1.6 -f matcher[1c.gro:0.03:0.06:0] > 7.1c.match
+%.1c.match.yap: %.match 1c.ar3r
+	head $< | ./match2yap.py $*.gro 1c.ar3r > $@
+
