@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-__version__ = "0.1"
+__version__ = "0.1.1"
 
 import sys
 import numpy as np
@@ -76,11 +76,11 @@ def argparser(arg):
     err = 0.03
     rmsdmax = 0.06 # nm
     adjdens = False
-    if len(cols)>0:
+    if len(cols)>1:
         err = float(cols[1])
-        if len(cols)>1:
+        if len(cols)>2:
             rmsdmax = float(cols[2])
-            if len(cols)>2:
+            if len(cols)>3:
                 adjdens = cols[3] in ("1", "TRUE", "True", "T", "t")
     
     

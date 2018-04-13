@@ -15,7 +15,9 @@ EXE=matcher smatcher
 	$(CC) -g -O $^ -o $@
 all: $(EXE)
 prepare:
+	-chmod a+w pairlist.[ch]
 	cp ../PairList/pairlist.[ch] .
+	chmod a-w pairlist.[ch]
 clean:
 	-rm *.o *~ $(EXE) @ @@ @@@ @@@@
 	-rm */*.o */*.mod 
