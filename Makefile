@@ -33,6 +33,7 @@ build.:
 	-rm -rf build
 	python setup.py build_ext --inplace
 install: matcher.py
+	-make clean
 	python setup.py install
 	install -d $(DEST)
 	install -d $(DEST)/formats
