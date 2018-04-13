@@ -36,7 +36,9 @@ install: matcher.py
 	python setup.py install
 	install -d $(DEST)
 	install -d $(DEST)/formats
-	install matcher.py $(DEST)/formats
+	install smatcher.py matcher.py $(DEST)/formats
+pypi: check
+	./setup.py sdist bdist_wheel upload
 
 
 #end python
