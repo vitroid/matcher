@@ -381,6 +381,9 @@ matchtype* matcher_core(int nOatoms, double* Oatoms,
                       int ne = neighbors[m];
                       double dd[3];
                       sub(&slidunit[l*3], &Oatoms[ne*3], dd);
+                      for(int d=0;d<3;d++){
+                        dd[d] -= floor(dd[d] / cell[d]+0.5) *cell[d];
+                      }
                       //PBC should be here
                       double L = dot(dd,dd);
                       if ( L < dmin ){

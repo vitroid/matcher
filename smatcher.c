@@ -58,6 +58,9 @@ smatchtype* smatcher_core(int nOatoms, double* Oatoms, double* cell, double radi
 	  double dd[3];
 	  sub(&Oatoms[qn*3], &Oatoms[pn*3], dd);
 	  sub(dd, d, dd);
+          for(int d=0;d<3;d++){
+            dd[d] -= floor(dd[d]/cell[d]+0.5)*cell[d];
+          }
 	  double L = dot(dd,dd);
 	  if ( L < dmin ){
 	    dmin = L;
