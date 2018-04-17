@@ -55,7 +55,7 @@ def hook1(lattice):
     cell = np.array([cellmat[0,0], cellmat[1,1], cellmat[2,2]])
     positions = lattice.reppositions - np.floor(lattice.reppositions)
     apos = np.dot(positions, cellmat)
-    matches = matcher(apos, cell, unitatoms, unitcell, err, rmsdmax, adjdens)
+    matches = matcher(apos, cell, unitatoms, unitcell, err, rprox, adjdens)
     for match in matches:
         rmsd, a, au, mat, atoms = match
         s = "{0:.5f} {1} {2} ".format(rmsd, a, au)
@@ -70,16 +70,16 @@ def hook1(lattice):
     
 
 def argparser(arg):
-    global err, rmsdmax, adjdens, unitatoms, unitcell
+    global err, rprox, adjdens, unitatoms, unitcell
     cols = arg.split(":")
     unitcell, unitatoms = LoadGRO(open(cols[0]), rel=True)
     err = 0.03
-    rmsdmax = 0.06 # nm
+    rprox = 0.4 # nm
     adjdens = False
     if len(cols)>1:
         err = float(cols[1])
         if len(cols)>2:
-            rmsdmax = float(cols[2])
+            rprox = float(cols[2])
             if len(cols)>3:
                 adjdens = cols[3] in ("1", "TRUE", "True", "T", "t")
     
@@ -91,9 +91,9 @@ def test():
     cell, Oatoms = LoadGRO(open(sys.argv[1]))
     unitcell, runitatoms = LoadGRO(open(sys.argv[2]), rel=True)
     err = float(sys.argv[3])
-    rmsdmax = float(sys.argv[4])
+    rprox = float(sys.argv[4])
     adjdens = False
-    matches = matcher(Oatoms, cell, runitatoms, unitcell, err, rmsdmax, adjdens)
+    matches = matcher(Oatoms, cell, runitatoms, unitcell, err, rprox, adjdens)
     print(matches)
 
 

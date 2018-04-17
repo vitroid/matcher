@@ -14,13 +14,14 @@ typedef struct _matchtype
   matchtype;
 
 int match_len(matchtype* s);
-matchtype* matcher_core(int nOatoms, double* Oatoms,
-			double cell[3],
-			int nunitatoms, double* unitatoms,
-			double unitcell[3],
-			double err,
-			double rmsdmax,
-			int adjdens );
+matchtype* matcher_core2(int nOatoms, double* Oatoms,
+			 double cell[3],
+			 int nunitatoms, double* unitatoms,
+			 double unitcell[3],
+			 double err,
+			 double rprox,
+			 int adjdens,
+			 int nostore);
 
 #endif
   

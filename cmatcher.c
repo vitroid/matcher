@@ -67,9 +67,9 @@ int  not_doublevector(PyArrayObject *mat)  {
 
 
 static PyObject *matcher(PyObject *self, PyObject* args) {
-  // arguments: Oatoms, cell, radius, rmsdmax, every
+  // arguments: Oatoms, cell, radius, rprox, every
   PyArrayObject *pos, *cell, *unitatoms, *unitcell;
-  float err, rmsdmax;
+  float err, rprox;
   int adjdens;
   
   /* Parse tuples separately since args will differ between C fcns */
@@ -78,7 +78,7 @@ static PyObject *matcher(PyObject *self, PyObject* args) {
 			&PyArray_Type, &cell,
 			&PyArray_Type, &unitatoms,
 			&PyArray_Type, &unitcell,
-			&err, &rmsdmax, &adjdens)) return NULL;
+			&err, &rprox, &adjdens)) return NULL;
   if (NULL == pos) return NULL;
   if (NULL == cell) return NULL;
   if (NULL == unitatoms) return NULL;
@@ -95,7 +95,8 @@ static PyObject *matcher(PyObject *self, PyObject* args) {
   double* c = (double*)cell->data;
   double* au = (double*)unitatoms->data;
   double* cu = (double*)unitcell->data;
-  matchtype* match = matcher_core(n, a, c, nu, au, cu, err, rmsdmax, adjdens);
+  int nostore=0;
+  matchtype* match = matcher_core2(n, a, c, nu, au, cu, err, rprox, adjdens, nostore);
   int nmatch = match_len(match);
   //Py_DECREF(pos);
   //Py_DECREF(cell);

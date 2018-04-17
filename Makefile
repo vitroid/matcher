@@ -46,6 +46,12 @@ pypi: check
 
 7.gro:
 	genice 7 -r 6 6 6 -d 1.6> $@
+T2x224.gro:
+	genice T2B -r 2 2 4 --add_noise 1 > $@
+T2.ar3r:
+	genice T2B -f rcom > $@
+T2.gro:
+	genice T2B > $@
 1c.ar3r:
 	genice 1c -r 1 1 1 -d 0.8 -f rcom > $@
 1c.gro:
@@ -63,4 +69,11 @@ test5: 7.1c.match
 	genice 7 -r 6 6 6 --dens 1.6 -f matcher[1c.gro:0.03:0.06:0] > 7.1c.match
 %.1c.match.yap: %.match 1c.ar3r
 	head $< | ./match2yap.py $*.gro 1c.ar3r > $@
+
+test6: T2x224.gro T2.ar3r
+	./matcher -e 0.01 -r 0.4 T2x224.gro T2.ar3r 
+test7: T2x224.gro T2.gro
+	python ./matcher.py T2x224.gro T2.gro 0.01 0.4 
+test8: T2x224.gro T2.gro  # use with analice
+	analice T2x224.gro -f matcher[T2.gro:0.01:0.4]
 
