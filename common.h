@@ -9,4 +9,7 @@ void sub(double*x, double* y, double* z);
 void MakeNeighborList(int natoms, int npairs, int* pairs, 
 		      //return values
 		      bnode** nei);
+void MakeNeighborList_hetero(int natoms, int npairs, int* pairs, 
+		      //return values
+		      bnode** nei);
 #endif

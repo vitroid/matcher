@@ -55,7 +55,7 @@ test: 7.gro
 test2: 7.gro
 	python ./smatcher.py 7.gro 8.0 0.06 > test2.smatch
 test3: 7.gro 1c.ar3r
-	./matcher -e 0.03 -v 0.06 7.gro 1c.ar3r > test3.1c.match
+	./matcher -e 0.03 -r 0.4 7.gro 1c.ar3r > test3.1c.match
 test4: 7.gro 1c.gro
 	python ./matcher.py 7.gro 1c.gro 0.03 0.06 > test4.1c.match
 test5: 7.1c.match
