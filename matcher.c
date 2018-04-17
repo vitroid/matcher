@@ -424,7 +424,7 @@ matchtype* matcher_core2(int nOatoms, double* Oatoms,
 		      //近くにいる分子はneiXに入っている
 		      int* nX = get_array(neiX[l]);
 		      double dmin = 1e99;
-		      assert (size(neiX[l]) > 0); // causes error if rprox is too short
+		      //assert (size(neiX[l]) > 0); // causes error if rprox is too short
 		      //fprintf(stderr, "NNEI: %d\n", size(neiX[l]));
 		      for(int m=0; m<size(neiX[l]); m++){
 			//molecular label in remaked list
