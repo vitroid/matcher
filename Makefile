@@ -12,7 +12,7 @@ EXE=matcher smatcher
 #for tests
 %: %.c
 %: %.o pairlist.o bst.o common.o
-	$(CC) -g -O $^ -o $@
+	$(CC) -g -O $^ -o $@ $(LDFLAGS)
 all: $(EXE)
 prepare:
 	-chmod a+w pairlist.[ch]
