@@ -193,7 +193,24 @@ bnode**
 NeighborAtoms(int nAtoms, double* Atoms, double lower, double upper, double* cell)
 {
   int* prox;
+  //memory leak test
+  /*
+  for(int i=0;i<10000;i++){
+    int nProx   = pairlist(nAtoms, Atoms, nAtoms, Atoms, lower, upper, cell, &prox);
+    free(prox);
+    }*/
+  
   int nProx   = pairlist(nAtoms, Atoms, nAtoms, Atoms, lower, upper, cell, &prox);
+  //memory leak test
+  /*
+  for(int i=0;i<100000;i++){
+    bnode** nei = (bnode**) malloc(sizeof(bnode*) * nAtoms);
+    MakeNeighborList(nAtoms, nProx, prox, nei);
+    for(int j=0;j<nAtoms;j++){
+      dispose(nei[j]);
+    }
+    free(nei);
+    }*/
   bnode** nei = (bnode**) malloc(sizeof(bnode*) * nAtoms);
   MakeNeighborList(nAtoms, nProx, prox, nei);
   free(prox);
@@ -201,6 +218,16 @@ NeighborAtoms(int nAtoms, double* Atoms, double lower, double upper, double* cel
 }
 
 
+bnode**
+NeighborAtoms2(int nAtoms, double* Atoms, int nBtoms, double* Btoms, double lower, double upper, double* cell)
+{
+  int* prox;
+  int nProx   = pairlist(nAtoms, Atoms, nBtoms, Btoms, lower, upper, cell, &prox);
+  bnode** nei = (bnode**) malloc(sizeof(bnode*) * nAtoms);
+  MakeNeighborList_hetero(nAtoms, nProx, prox, nei);
+  free(prox);
+  return nei;
+}
 
 
 
@@ -216,13 +243,14 @@ int match_len(matchtype* s)
 
 
 
-matchtype* matcher_core(int nOatoms, double* Oatoms,
-			double cell[3],
-			int nunitatoms, double* unitatoms,
-			double unitcell[3],
-			double err,
-			double rmsdmax,
-			int adjdens )
+matchtype* matcher_core2(int nOatoms, double* Oatoms,
+			 double cell[3],
+			 int nunitatoms, double* unitatoms,
+			 double unitcell[3],
+			 double err,
+			 double rprox,
+			 int adjdens,
+			 int nostore)
 {
   double dens0 = nOatoms / (cell[0]*cell[1]*cell[2]);
   double dens1 = nunitatoms / (unitcell[0]*unitcell[1]*unitcell[2]);
@@ -240,7 +268,7 @@ matchtype* matcher_core(int nOatoms, double* Oatoms,
   }
   fprintf(stderr,"System   %d %f %f %f\n", nOatoms, cell[0], cell[1], cell[2]);
   fprintf(stderr,"Template %d %f %f %f\n", nunitatoms, unitcell[0], unitcell[1], unitcell[2]);
-  fprintf(stderr, "%f %f %d\n", err, rmsdmax, adjdens);
+  fprintf(stderr, "%f %f %d\n", err, rprox, adjdens);
   fprintf(stderr, "\n");
   for(int i=0;i<nunitatoms;i++){
     fprintf(stderr, "%f %f %f\n", Oatoms[i*3+0], Oatoms[i*3+1], Oatoms[i*3+2]);
@@ -375,43 +403,116 @@ matchtype* matcher_core(int nOatoms, double* Oatoms,
                   }                       
                   double msd = 0.0;
                   int partners[nunitatoms];
-                  for(int l=0; l<nunitatoms; l++){
-                    double dmin = 1e99;
-                    for(int m=0; m<size(nei[p])+1; m++){
-                      int ne = neighbors[m];
-                      double dd[3];
-                      sub(&slidunit[l*3], &Oatoms[ne*3], dd);
-                      for(int d=0;d<3;d++){
-                        dd[d] -= floor(dd[d] / cell[d]+0.5) *cell[d];
-                      }
-                      //PBC should be here
-                      double L = dot(dd,dd);
-                      if ( L < dmin ){
-                        dmin = L;
-                        partners[l] = ne;
-                      }
-                    }
-                    msd += dmin;
-                  }
-                  double rmsd = sqrt(msd / nunitatoms);
-                  if ( rmsd < rmsdmax ){
-		    matchtype* m = (matchtype*) malloc (sizeof(matchtype));
-		    m->rmsd = rmsd;
-		    m->atom_gro = p;
-		    m->atom_unitcell = center;
-		    for(int o=0;o<3; o++){
-		      m->mat[o+0] = Rx[o];
-		      m->mat[o+3] = Ry[o];
-		      m->mat[o+6] = Rz[o];
+		  if ( nunitatoms > 100 ){
+		    //この部分が全分子の組みあわせになっていて遅い?
+		    //そこで、nei[p]とunitatomsの間のpairlistをさらに生成する。
+		    //まずneiの座標を別の配列にコピーする。
+		    int nnei = size(nei[p])+1;
+		    double pnei[3*nnei];
+		    int   inei[nnei];
+		    for(int m=0; m<nnei; m++){
+		      int ne = neighbors[m];
+		      for(int d=0;d<3;d++){
+			pnei[3*m+d] = Oatoms[3*ne+d];
+		      }
+		      inei[m] = ne;
 		    }
-		    m->natom= nunitatoms;
-		    m->atoms = (int*) malloc (sizeof(int)*nunitatoms);
-                    for(int l=0;l<nunitatoms;l++){
-		      m->atoms[l] = partners[l];
-                    }
-		    m->next = match;
-		    match = m;
-		  } // for (center )
+		    //近い分子はどれぐらいの距離にあるか。
+		    //わからない。それをパラメータrproxで与えることにする。
+		    bnode** neiX = NeighborAtoms2(nunitatoms, slidunit, nnei, pnei, 0.0, rprox, cell);
+		    for(int l=0; l<nunitatoms; l++){
+		      //近くにいる分子はneiXに入っている
+		      int* nX = get_array(neiX[l]);
+		      double dmin = 1e99;
+		      assert (size(neiX[l]) > 0); // causes error if rprox is too short
+		      //fprintf(stderr, "NNEI: %d\n", size(neiX[l]));
+		      for(int m=0; m<size(neiX[l]); m++){
+			//molecular label in remaked list
+			int re = nX[m];
+			double dd[3];
+			sub(&slidunit[l*3], &pnei[re*3], dd);
+			for(int d=0;d<3;d++){
+			  dd[d] -= floor(dd[d] / cell[d]+0.5) *cell[d];
+			}
+			//PBC should be here
+			double L = dot(dd,dd);
+			if ( L < dmin ){
+			  dmin = L;
+			  partners[l] = inei[re];
+			}
+			
+		      }
+		      free(nX);
+		      msd += dmin;
+		      if ( nunitatoms*rprox*rprox/25 < msd )
+			break; //for l loop 
+		    }
+		    for(int l=0;l<nunitatoms; l++){
+		      dispose(neiX[l]);
+		    }
+		    free(neiX);
+		  }
+		  else{
+		    for(int l=0; l<nunitatoms; l++){
+		      double dmin = 1e99;
+		      for(int m=0; m<size(nei[p])+1; m++){
+			int ne = neighbors[m];
+			double dd[3];
+			sub(&slidunit[l*3], &Oatoms[ne*3], dd);
+			for(int d=0;d<3;d++){
+			  dd[d] -= floor(dd[d] / cell[d]+0.5) *cell[d];
+			}
+			//PBC should be here
+			double L = dot(dd,dd);
+			if ( L < dmin ){
+			  dmin = L;
+			  partners[l] = ne;
+			}
+		      }
+		      msd += dmin;
+		      if ( nunitatoms*rprox*rprox/25 < msd )
+			break;
+		    }
+		  }
+		  double rmsd = sqrt(msd/nunitatoms);
+		  if ( rmsd < rprox/5 ){
+		    if ( nostore ){
+		      printf("%f %d %d ", rmsd, p, center);
+		      for(int o=0;o<3; o++){
+			printf("%f ", Rx[o]);
+		      }
+		      for(int o=0;o<3; o++){
+			printf("%f ", Ry[o]);
+		      }
+		      for(int o=0;o<3; o++){
+			printf("%f ", Rz[o]);
+		      }
+		      printf("%d ", nunitatoms);
+		      for(int o=0; o<nunitatoms;o++){
+			printf("%d ", partners[o]);
+		      }
+		      printf("\n");
+		    }
+		    else{
+		      matchtype* m = (matchtype*) malloc (sizeof(matchtype));
+		      m->rmsd = rmsd;
+		      fprintf(stderr, "%d %d %d %d %d %f\n", p,q,r,s,center,rmsd);
+		      m->atom_gro = p;
+		      m->atom_unitcell = center;
+		      for(int o=0;o<3; o++){
+			m->mat[o+0] = Rx[o];
+			m->mat[o+3] = Ry[o];
+			m->mat[o+6] = Rz[o];
+		      }
+		      m->natom= nunitatoms;
+		      m->atoms = (int*) malloc (sizeof(int)*nunitatoms);
+		      for(int l=0;l<nunitatoms;l++){
+			m->atoms[l] = partners[l];
+		      }
+		      m->next = match;
+		      match = m;
+		    }//nostore
+		  } //rmsd
 		} // if ( !error )          
 		free(neighbors);
 		ntet += 1;
@@ -431,6 +532,10 @@ matchtype* matcher_core(int nOatoms, double* Oatoms,
     dispose(neiB[i]);
     dispose(neiC[i]);
   }
+  free(nei);
+  free(neiA);
+  free(neiB);
+  free(neiC);
   fprintf(stderr,"%d ntet\n", ntet);
   fprintf(stderr, "%d nmatch\n", match_len(match));
 
@@ -444,9 +549,9 @@ matchtype* matcher_core(int nOatoms, double* Oatoms,
 
 void usage(char *cmd)
 {
-  fprintf(stderr, "usage: %s [-e error][-v rmsdmax][-a] grofile template.ar3r error rmsdmax\n", cmd);
+  fprintf(stderr, "usage: %s [-e error][-r rprox][-a] grofile template.ar3r error rmsdmax\n", cmd);
   fprintf(stderr, " -e error   Allowance for p,q,r vectors (0.03)\n");
-  fprintf(stderr, " -v value   Upper bound for root mean square displacement (RMSD) (1.00)\n");
+  fprintf(stderr, " -r value   Radius of proximity (0.4 nm)\n");
   fprintf(stderr, " -a         Automatic densityadjustment\n");
   exit(1);
 }
@@ -468,15 +573,15 @@ int main(int argc, char* argv[])
 
   int arg = 1;
   double err = 0.03;
-  double rmsdmax = 1.00;
+  double rprox = 0.4;
   int adjdens = 0;
   while( argv[arg][0] == '-' ){
     if ( 0 == strncmp(argv[arg], "-e", 2) ){
       sscanf(argv[arg+1], "%lf", &err);
       arg += 2;
     }
-    else if ( 0 == strncmp(argv[arg], "-v", 2) ){
-      sscanf(argv[arg+1], "%lf", &rmsdmax);
+    else if ( 0 == strncmp(argv[arg], "-r", 2) ){
+      sscanf(argv[arg+1], "%lf", &rprox);
       arg += 2;
     }
     else if ( 0 == strncmp(argv[arg], "-a", 2) ){
@@ -502,11 +607,14 @@ int main(int argc, char* argv[])
   int nunitatoms = LoadAR3R(file, &unitatoms, unitcell);
   fclose(file);
 
-  matchtype* match = matcher_core(nOatoms,    Oatoms,    cell,
-				  nunitatoms, unitatoms, unitcell,
-				  err,
-				  rmsdmax,
-				  adjdens);
+  matchtype* match = matcher_core2(nOatoms,    Oatoms,    cell,
+				   nunitatoms, unitatoms, unitcell,
+				   err,
+				   rprox,
+				   adjdens,
+				   1 //nostore
+				   );
+  //nostore then useless
   while ( match != NULL ){
     matchtype* m = match;
     printf("%f %d %d ", m->rmsd, m->atom_gro, m->atom_unitcell);

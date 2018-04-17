@@ -71,3 +71,22 @@ MakeNeighborList(int natoms, int npairs, int* pairs,
     nei[r1] = insert(nei[r1], r0);
   }
 }
+
+
+//for hetero pairs
+void
+MakeNeighborList_hetero(int natoms, int npairs, int* pairs, 
+		 //return values
+		 bnode** nei)
+{
+  //make neighborlist
+  for(int i=0;i<natoms; i++){
+    nei[i] = NULL;
+  }
+  for(int i=0;i<npairs;i++){
+    int r0 = pairs[i*2+0];
+    int r1 = pairs[i*2+1];
+    nei[r0] = insert(nei[r0], r1);
+    //nei[r1] = insert(nei[r1], r0);
+  }
+}
