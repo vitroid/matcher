@@ -96,11 +96,12 @@ def drawatoms(atoms, members=None):
     return s
 
 def usage():
-    print("usage: {0} [-e every][-v maxval] traj.gro pattern.ar3r < matcher.output")
+    print("usage: {0} [-a][-e every][-v maxval] traj.gro pattern.ar3r < matcher.output")
     sys.exit(1)
     
 every = 1
 maxval = 1.0
+adjdens = False
 while sys.argv[1][0] == "-":
     if sys.argv[1] == "-e":
         every = int(sys.argv[2])
@@ -110,11 +111,20 @@ while sys.argv[1][0] == "-":
         maxval = float(sys.argv[2])
         sys.argv.pop(1)
         sys.argv.pop(1)
+    elif sys.argv[1] == "-a":
+        adjdens = True
+        sys.argv.pop(1)
     else:
         usage()
     
 Cell, Oatoms = LoadGRO(open(sys.argv[1]))  # in AA, in AA
 Unitcell, unitatoms = LoadAR3R(open(sys.argv[2])) # in AA, in rel
+dens0 = Oatoms.shape[0] / np.linalg.det(Cell)
+dens1 = unitatoms.shape[0] / np.linalg.det(Unitcell)
+ratio = (dens1/dens0)**(1./3.)
+if adjdens:
+    Unitcell *= ratio
+
 mode = ""
 if len(sys.argv) > 3:
     mode = sys.argv[3]
