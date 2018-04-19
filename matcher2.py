@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 
+# 近くから順にマッチングさせる、順当なやりかた。
+# 巨大な情報を準備する必要がなく、かなり速い。
+# Cにすればもっと速くなるだろう。
+
 import sys
+import logging
 import numpy as np
 import yaplotlib as yp
 from collections import defaultdict
@@ -75,6 +80,9 @@ def find_nearest(pos, rprox, addressbook, points):
     return rmin, dmin
 
 def main():
+    logging.basicConfig(level=logging.INFO,
+                        format="%(levelname)s %(message)s")
+    logger = logging.getLogger()
     gcell, gatoms = LoadGRO(open(sys.argv[1]), rel=True)
     ucell, uatoms = LoadGRO(open(sys.argv[2]), rel=True)
     ng = len(gatoms)
@@ -86,6 +94,8 @@ def main():
     #まず重ねる点を決める。
     ucenter = 145
     for gcenter in range(ng):
+        if int(gcenter*100//ng) != int((gcenter-1)*100/ng):
+            logger.info("Progress {0}%".format(int(gcenter*100//ng)))
         # それらの点を原点に平行移動する。
         sgatoms = gatoms - gatoms[gcenter]
         sgatoms -= np.floor(sgatoms+0.5)
@@ -133,6 +143,18 @@ def main():
                     corr[uorder[i]] = glist[i]
                 print(nu, *corr)
 
+def test():
+    H = np.array([2.0, 3.0, 5.0, 1.0, 4.0, 2.0, 3.0, 5.0, 1.0]).reshape((3,3))
+    U,S,Vt = np.linalg.svd(H)
+    # R = Vt.T * U.T
+    R = np.dot(U,Vt)
+    print("U")
+    print(U)
+    print("Vt")
+    print(Vt)
+    print("R")
+    print(R)
+
+    
 if __name__ == "__main__":
     main()
-    

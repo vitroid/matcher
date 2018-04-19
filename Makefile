@@ -11,7 +11,7 @@ EXE=matcher smatcher
 	$(CC) -std=c99 -c -g -O $< -o $@
 #for tests
 %: %.c
-%: %.o pairlist.o bst.o common.o
+%: %.o pairlist.o bst.o common.o svd.o neighborlist.o
 	$(CC) -g -O $^ -o $@ $(LDFLAGS)
 all: $(EXE)
 prepare:
@@ -76,4 +76,9 @@ test7: T2x224.gro T2.gro
 	python ./matcher.py T2x224.gro T2.gro 0.01 0.4 
 test8: T2x224.gro T2.gro  # use with analice
 	analice T2x224.gro -f matcher[T2.gro:0.01:0.4]
+
+lattices/T2x22.py:
+	genice T2B -f reshape[1,1,0,-1,1,0,0,0,2] --add_noise 1 > $@
+T2x22.gro:
+	genice T2x22 > $@
 
