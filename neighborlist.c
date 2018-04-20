@@ -15,7 +15,7 @@ init_addressbook(int grid[3])
     abook->grid[d] = grid[d];
   }
   int ngrid = grid[0]*grid[1]*grid[2];
-  abook->nresidents = (int*) malloc(sizeof(int)*ngrid);
+  abook->nresidents = (int*) calloc(ngrid, sizeof(int));
   abook->residents  = (int**) malloc(sizeof(int*)*ngrid);
   return abook;
 }
