@@ -190,6 +190,7 @@ int find_nearest(double rloc[3], sAddressBook* abook, double cell[3], double rpo
       jmin = j;
     }
   }
+  free(neis);
   //fprintf(stderr, "jmin %d\n", jmin);
   return jmin;
 }

@@ -132,11 +132,13 @@ while True:
     # 2018-4-9 New output format of matcher.c
     msd     = float(cols[0])
     Origin  = Oatoms[int(cols[1])].copy()  #atom at the matching center
+    Origin -= np.floor(Origin/Cell+0.5)*Cell
     center  = int(cols[2])
     rotmat  = np.array([float(x) for x in cols[3:12]]).reshape((3,3))
     N = int(cols[12])
     if len(cols) < 13+N:
         break
+    irot = np.linalg.inv(rotmat)
     members = [int(x) for x in cols[13:N+13]]
     #draw matched box
 
@@ -180,11 +182,17 @@ while True:
     
         s += yp.Color(4)
         s += drawatoms(Slidunit)
-        for i in range(len(Slidunit)):
-            s += yp.Line(Slidunit[i], Oatoms[members[i]])
+        #for i in range(len(Slidunit)):
+        #    g = Oatoms[members[i]] - Origin
+        #    g -= np.floor(g/Cell+0.5)*Cell
+        #    g += Origin
+        #    d = Slidunit[i] - g
+        #    d -= np.floor(d/Cell+0.5)*Cell
+        #    s += yp.Line(g, g+d)
+        #    # 変位ベクトルはどうやってもうまくいかないので、やめる。
 
-s += yp.Size(0.1)
-s += yp.Color(5)
-s += yp.Layer(3)
-s += drawatoms(Oatoms, members=matched)
+#s += yp.Size(0.1)
+#s += yp.Color(5)
+#s += yp.Layer(3)
+#s += drawatoms(Oatoms, members=matched)
 print(s) # end of frame

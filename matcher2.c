@@ -276,6 +276,7 @@ void matcher2_core(int nuatoms,
     */
     for(int i=0;i<ngorig;i++)
       gorder[i] = gorig[gorder[i]];
+    free(gorig);
     double udistance[nuatoms];
     for(int i=0; i<nuatoms; i++){
       double sum=0.0;
@@ -378,7 +379,6 @@ void matcher2_core(int nuatoms,
 	}// if
       }//for mj
     }//for mi
-    free(gorig);
     
     dispose_addressbook(abook);
   }//for gcenter;

@@ -19,7 +19,8 @@ LoadGRO(FILE* file, double** Oatoms, double* cell){
     double x,y,z;
     int   id;
     char  label[99],label2[99];
-    sscanf(line, "%10s%5s%5d%8lf%8lf%8lf\n", label, label2, &id, &x, &y, &z);
+    sscanf(line, "%10s%5s%5d", label, label2, &id);
+    sscanf(&line[20], "%lf %lf %lf\n",  &x, &y, &z);
     if ( strncasecmp( label2, "O", 1 ) == 0 ){
       (*Oatoms)[nOatoms*3+0] = x;
       (*Oatoms)[nOatoms*3+1] = y;
