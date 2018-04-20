@@ -135,7 +135,7 @@ sAddressBook* AddressBook(int grid[3], int npos, double* rpos)
   }
   int L = GX*GY*GZ;
   for(int i=0;i<L;i++){
-    abook->residents[i] = (int*) malloc(sizeof(int)*abook->nresidents[i]+1);
+    abook->residents[i] = (int*) malloc(sizeof(int)*(abook->nresidents[i]+1));
     abook->residents[i][abook->nresidents[i]] = -1; //terminator
     abook->nresidents[i] = 0;
   }
