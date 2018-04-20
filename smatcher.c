@@ -37,7 +37,7 @@ smatchtype* smatcher_core(int nOatoms, double* Oatoms, double* cell, double radi
   free(prox);
   fprintf(stderr,"%d nProx A\n", nProx);
   for(int p=0; p<nOatoms; p+=every){
-    fprintf(stderr, "\r%.1f %%", p*100./nOatoms);
+    fprintf(stderr, "\n%.1f %%", p*100./nOatoms);
     //this does not include p itself!
     int* pnei = get_array(nei[p]);
     //for(int jq=0; jq<size(nei[p]); jq++){//q is in proximity of p
@@ -49,7 +49,7 @@ smatchtype* smatcher_core(int nOatoms, double* Oatoms, double* cell, double radi
       //offset between centers
       sub(&Oatoms[q*3], &Oatoms[p*3], d);
       double sumsqdev = 0.0;
-      
+      //fprintf(stderr, "%d\n", size(nei[q]));
       for(int ip=0; ip<size(nei[p]); ip++){
 	double dmin = 1e99;
 	int pn = pnei[ip];
@@ -122,9 +122,9 @@ int main(int argc, char* argv[])
 
   int N = nOatoms * nOatoms;
   int every = 1;
-  if ( N > 100 ){
+  if ( N > 100000 ){
     //evaluate only 10 M pairs.
-    every = nOatoms*nOatoms/(2*100)+1;
+    every = nOatoms*nOatoms/(2*100000)+1;
     fprintf(stderr, "Too many combinations! Will skip every %d to reduce time.\n",every);
   }
 
