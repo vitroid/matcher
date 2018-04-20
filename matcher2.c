@@ -356,6 +356,9 @@ void matcher2_core(int nuatoms,
 		}
 		// uvをRだけ回転しtだけ並進するとgvに重なる。
 		rmsd = rot_trans(nv+1, uv, gv, R, t);
+                if (rmsd > 0.1 ){
+                  break;
+                }
 		//printf("%d %d %f\n", nv+1, nearest, rmsd);
 	      } //for nv
 	      if ( rmsd < 0.1 ){
