@@ -217,7 +217,7 @@ void matcher2_core(int nuatoms,
   // 近接距離。グリッドのサイズ
   double rprox = 0.4;
   // まず重ねる点を決める。
-  int ucenter = 145;
+  int ucenter = 0;
   for(int gcenter=0; gcenter<ngatoms; gcenter++){
     if (gcenter*100/ngatoms != (gcenter-1)*100/ngatoms)
       fprintf(stderr, "Progress %d%%\n", gcenter*100/ngatoms);
@@ -447,7 +447,8 @@ int main(int argc, char *argv[]){
   
 
 
-int test(int argc, char *argv[]){
+void
+test(int argc, char *argv[]){
   //compare with the result of test() in matcher2.py
   double H[3*3] = { 2.0, 3.0, 5.0, 1.0, 4.0, 2.0, 3.0, 5.0, 1.0 };
   double w[3];

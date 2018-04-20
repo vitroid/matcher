@@ -23,28 +23,6 @@ def LoadGRO(file):
     return cell, Os
 
 
-def LoadAR3R(file):
-    while True:
-        line = file.readline()
-        if len(line) == 0:
-            break
-        if "@BOX3" == line[:5]:
-            line  = file.readline()
-            cols  = line.split()
-            dimen = np.array([float(x) for x in cols])
-            cell  = np.diag(dimen)
-        elif "@AR3R" == line[:5]:
-            natom = int(file.readline())
-            Os = []
-            for i in range(natom):
-                line = file.readline()
-                cols = line.split()
-                xyz = np.array([float(x) for x in cols])
-                xyz -= np.floor( xyz + 0.5 )
-                Os.append(xyz)
-            Os = np.array(Os)
-    #the last line is cell shape
-    return cell, Os
 
 #Put different colors for different vectors
 def direction2color(v, digitize=4):
@@ -96,7 +74,7 @@ def drawatoms(atoms, members=None):
     return s
 
 def usage():
-    print("usage: {0} [-a][-e every][-v maxval] traj.gro pattern.ar3r < matcher.output")
+    print("usage: {0} [-a][-e every][-v maxval] traj.gro pattern.gro < matcher.output")
     sys.exit(1)
     
 every = 1
@@ -118,9 +96,9 @@ while sys.argv[1][0] == "-":
         usage()
     
 Cell, Oatoms = LoadGRO(open(sys.argv[1]))  # in AA, in AA
-Unitcell, unitatoms = LoadAR3R(open(sys.argv[2])) # in AA, in rel
+Unitcell, Unitatoms = LoadGRO(open(sys.argv[2])) # in AA, in rel
 dens0 = Oatoms.shape[0] / np.linalg.det(Cell)
-dens1 = unitatoms.shape[0] / np.linalg.det(Unitcell)
+dens1 = Unitatoms.shape[0] / np.linalg.det(Unitcell)
 ratio = (dens1/dens0)**(1./3.)
 if adjdens:
     Unitcell *= ratio
@@ -162,15 +140,15 @@ while True:
     members = [int(x) for x in cols[13:N+13]]
     #draw matched box
 
-    # roll the unit cell to center (rel)
-    rel = unitatoms - unitatoms[center]
-    rel -= np.floor(rel+0.5)
+    # roll the unit cell to center (abs)
+    rel = Unitatoms - Unitatoms[center]
+    rel -= np.dot(np.floor(np.dot(rel, np.linalg.inv(Unitcell))+0.5),Unitcell)
     # rel to abs
-    Slid = np.dot(rel, Unitcell)
+    Slid = Unitcell
     # rotate box
     RotUnitcell       = np.dot(Unitcell, rotmat)
     # 
-    Boxslide = np.dot(-np.dot(unitatoms[center], Unitcell), rotmat) + Origin
+    Boxslide = np.dot(-Unitatoms[center], rotmat) + Origin
     # rotate atoms in the unit cell
     Slidunit    = np.dot(Slid, rotmat) + Origin
     #s += yp.Color(3)

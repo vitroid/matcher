@@ -28,15 +28,6 @@ isClose(double x, double y)
 
   
 
-
-
-  
-double vector_length(double* v)
-{
-  return sqrt(dot(v,v));
-}
-
-
 double cosine(double *a, double*b){
   return dot(a,b) / (vector_length(a)*vector_length(b));
 }

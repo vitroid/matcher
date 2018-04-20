@@ -6,7 +6,7 @@ else
 	DEST=~/.genice
 endif
 LDFLAGS=-lm
-EXE=matcher smatcher
+EXE=matcher smatcher matcher2
 %.o: %.c %.h
 	$(CC) -std=c99 -c -g -O $< -o $@
 #for tests
