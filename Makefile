@@ -77,6 +77,12 @@ test7: T2x224.gro T2.gro
 test8: T2x224.gro T2.gro  # use with analice
 	analice T2x224.gro -f matcher[T2.gro:0.01:0.4]
 
+test9: T2x224.gro T2.gro
+	./matcher2 T2x224.gro T2.gro
+test10: T2x224.gro T2.gro
+	python ./matcher2.py T2x224.gro T2.gro
+
+
 lattices/T2x22.py:
 	genice T2B -f reshape[1,1,0,-1,1,0,0,0,2] --add_noise 1 > $@
 T2x22.gro:

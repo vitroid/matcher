@@ -29,6 +29,7 @@ dispose_addressbook(sAddressBook* abook)
   }
   free(abook->residents);
   free(abook->nresidents);
+  free(abook);
 }
 
 
