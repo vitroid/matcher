@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <math.h>
 #include "common.h"
 
 
@@ -43,6 +44,10 @@ double dot(double* x, double* y)
 }
 
   
+double vector_length(double x[3])
+{
+  return sqrt(dot(x,x));
+}
 
 
 void
