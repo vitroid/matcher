@@ -3,7 +3,7 @@
 #include <strings.h>
 #include <math.h>
 #include "neighborlist.h"
-
+#include <assert.h>
 
 
 
@@ -54,7 +54,7 @@ returns the list of residents in the addressbook near addr.
     }
   }
   *residents = (int*) malloc(sizeof(int)*nnei);
-  nnei = 0;
+  int nnei2 = 0;
   for(int i=-1; i<2; i++){
     int ii = (i + district[0] + GX) % GX;
     for(int j=-1; j<2; j++){
@@ -62,12 +62,13 @@ returns the list of residents in the addressbook near addr.
       for(int k=-1; k<2; k++){
 	int kk = (k + district[2] + GZ) % GZ;
 	for(int l=0;l<abook->nresidents[ADDRESS(ii,jj,kk)]; l++){
-	  (*residents)[nnei] = abook->residents[ADDRESS(ii,jj,kk)][l];
-	  nnei++;
+	  (*residents)[nnei2] = abook->residents[ADDRESS(ii,jj,kk)][l];
+	  nnei2++;
 	}
       }
     }
   }
+  assert (nnei == nnei2);
   return nnei;
 }
 
