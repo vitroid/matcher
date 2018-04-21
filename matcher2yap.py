@@ -150,7 +150,7 @@ while True:
     rel = Unitatoms - Unitatoms[center]
     rel -= np.dot(np.floor(np.dot(rel, np.linalg.inv(Unitcell))+0.5),Unitcell)
     # rel to abs
-    Slid = Unitcell
+    Slid = rel
     # rotate box
     RotUnitcell       = np.dot(Unitcell, rotmat)
     # 
@@ -184,8 +184,8 @@ while True:
         s += yp.Layer(3)
         s += yp.Size(0.3)
     
-        s += yp.Color(4)
-        s += drawatoms(Slidunit)
+        #s += yp.Color(4)
+        #s += drawatoms(Slidunit)
         #for i in range(len(Slidunit)):
         #    g = Oatoms[members[i]] - Origin
         #    g -= np.floor(g/Cell+0.5)*Cell
@@ -195,8 +195,8 @@ while True:
         #    s += yp.Line(g, g+d)
         #    # 変位ベクトルはどうやってもうまくいかないので、やめる。
 
-#s += yp.Size(0.1)
-#s += yp.Color(5)
-#s += yp.Layer(3)
-#s += drawatoms(Oatoms, members=matched)
+s += yp.Size(0.3)
+s += yp.Color(5)
+s += yp.Layer(3)
+s += drawatoms(Oatoms, members=matched)
 print(s) # end of frame
