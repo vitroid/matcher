@@ -170,16 +170,16 @@ while True:
         s += yp.Color(palette[color])
         # matched box
         s += yp.Layer(4)
-        # s += drawbox(Origin,RotUnitcell,halfshift=True)
+        s += drawbox(Origin,RotUnitcell,halfshift=True)
         # unit cell
-        s += yp.Layer(1)
+        s += yp.Layer(2)
         s += drawbox(Boxslide,RotUnitcell,halfshift=True)
 
         s += yp.Layer(2)
         #s += drawbox2(Boxslide,RotUnitcell)
 
         s += yp.Layer(3)
-        s += yp.Size(0.15)
+        s += yp.Size(0.3)
     
         s += yp.Color(4)
         s += drawatoms(Slidunit)
