@@ -196,7 +196,7 @@ while True:
         #    # 変位ベクトルはどうやってもうまくいかないので、やめる。
 
 s += yp.Size(0.3)
-s += yp.Color(5)
+s += yp.Color(4)
 s += yp.Layer(3)
 s += drawatoms(Oatoms, members=matched)
 print(s) # end of frame
