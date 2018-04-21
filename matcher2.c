@@ -152,8 +152,6 @@ void quick_proximity(int n, int* order, double* distance, int ntop)
     quick_proximity(n-tail-1, &order[tail+1], distance, ntop-tail-1);
     return;
   }
-  if ( pivot > ntop ){
-  }
   //quick_sort test
   /*quick_proximity(head, order, distance, 0);
   quick_proximity(n-tail-1, &order[tail+1], distance, 0);
@@ -194,13 +192,15 @@ void quick_sort(int n, int* order, double* distance)
 
 
 
-void matcher2_core(int nuatoms,
-		   double* uatoms,
-		   double ucell[3],
-		   int ngatoms,
-		   double* gatoms,
-		   double gcell[3],
-		   int adjdens)
+match*
+matcher2_core(int nuatoms,
+              double* uatoms,
+              double ucell[3],
+              int ngatoms,
+              double* gatoms,
+              double gcell[3],
+              int adjdens,
+              int nostore)
 {
   //密度の調整
   if ( adjdens ){
@@ -212,6 +212,7 @@ void matcher2_core(int nuatoms,
     ucell[1] *= ratio;
     ucell[2] *= ratio;
   }
+  match* matches = NULL;
   // 単位胞の外接球の半径
   double uR = (ucell[0]+ucell[1]+ucell[2])/2.;
   // 近接距離。グリッドのサイズ
@@ -362,20 +363,43 @@ void matcher2_core(int nuatoms,
 		//printf("%d %d %f\n", nv+1, nearest, rmsd);
 	      } //for nv
 	      if ( rmsd < 0.1 ){
-		printf("%f %d %d ", rmsd, gcenter, ucenter);
-		for(int i=0; i<9; i++){
-		  printf("%f ", R[i]);
-		}
-		printf("%d ", nuatoms);
-		int corr[nuatoms];
-		for(int i=0; i<nuatoms; i++){
-		  //printf("%d %d\n", uorder[i], glist[i]);
-		  corr[uorder[i]] = glist[i];
-		}
-		for(int i=0; i<nuatoms; i++){
-		  printf("%d ", corr[i]);
-		}
-		printf("\n");
+                if ( nostore ){
+                  printf("%f %d %d ", rmsd, gcenter, ucenter);
+                  for(int i=0; i<9; i++){
+                    printf("%f ", R[i]);
+                  }
+                  printf("%d ", nuatoms);
+                  int corr[nuatoms];
+                  for(int i=0; i<nuatoms; i++){
+                    //printf("%d %d\n", uorder[i], glist[i]);
+                    corr[uorder[i]] = glist[i];
+                  }
+                  for(int i=0; i<nuatoms; i++){
+                    printf("%d ", corr[i]);
+                  }
+                  printf("\n");
+                }
+                else{
+                  match* ma = (match*)malloc(sizeof(match));
+                  ma->rmsd = rmsd;
+                  ma->atom_gro = gcenter;
+                  ma->atom_unitcell = ucenter;
+                  for(int i=0;i<9;i++){
+                    ma->mat[i] = R[i];
+                  }
+                  ma->natom = nuatoms;
+                  ma->atoms = (int*) malloc(sizeof(int)*nuatoms);
+                  int corr[nuatoms];
+                  for(int i=0; i<nuatoms; i++){
+                    //printf("%d %d\n", uorder[i], glist[i]);
+                    corr[uorder[i]] = glist[i];
+                  }
+                  for(int i=0;i<nuatoms;i++){
+                    ma->atoms[i] = corr[i];
+                  }
+                  ma->next = matches;
+                  matches = ma;
+                }
 	      } //if rmsd
 	    } // if
 	  } //for mk
@@ -386,6 +410,7 @@ void matcher2_core(int nuatoms,
     dispose_addressbook(abook);
   }//for gcenter;
   //no return value
+  return matches;
 }
 
 
@@ -444,7 +469,8 @@ int main(int argc, char *argv[]){
   exit(0);
   */
   int adjdens = 1;
-  matcher2_core(nuatoms, uatoms, ucell, ngatoms, gatoms, gcell, adjdens);
+  int nostore = 1;
+  matcher2_core(nuatoms, uatoms, ucell, ngatoms, gatoms, gcell, adjdens, nostore);
 }
 
   

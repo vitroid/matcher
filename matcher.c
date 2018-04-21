@@ -222,7 +222,7 @@ NeighborAtoms2(int nAtoms, double* Atoms, int nBtoms, double* Btoms, double lowe
 
 
 
-int match_len(matchtype* s)
+int match_len(match* s)
 {
   int n=0;
   while ( s != NULL ){
@@ -234,7 +234,7 @@ int match_len(matchtype* s)
 
 
 
-matchtype* matcher_core2(int nOatoms, double* Oatoms,
+match* matcher_core2(int nOatoms, double* Oatoms,
 			 double cell[3],
 			 int nunitatoms, double* unitatoms,
 			 double unitcell[3],
@@ -291,7 +291,7 @@ matchtype* matcher_core2(int nOatoms, double* Oatoms,
   //find triangle PQR that matches the shape
   //There might not be an atom at the origin of the unit cell...2018-4-7
   int ntet=0;
-  matchtype* match = NULL;
+  match* matches = NULL;
   for(int p=0; p<nOatoms; p++){
     fprintf(stderr, "\r%.1f %%", p*100./nOatoms);
     int nnA = size(neiA[p]);
@@ -485,7 +485,7 @@ matchtype* matcher_core2(int nOatoms, double* Oatoms,
 		      printf("\n");
 		    }
 		    else{
-		      matchtype* m = (matchtype*) malloc (sizeof(matchtype));
+		      match* m = (match*) malloc (sizeof(matches));
 		      m->rmsd = rmsd;
 		      fprintf(stderr, "%d %d %d %d %d %f\n", p,q,r,s,center,rmsd);
 		      m->atom_gro = p;
@@ -500,8 +500,8 @@ matchtype* matcher_core2(int nOatoms, double* Oatoms,
 		      for(int l=0;l<nunitatoms;l++){
 			m->atoms[l] = partners[l];
 		      }
-		      m->next = match;
-		      match = m;
+		      m->next = matches;
+		      matches = m;
 		    }//nostore
 		  } //rmsd
 		} // if ( !error )          
@@ -528,10 +528,10 @@ matchtype* matcher_core2(int nOatoms, double* Oatoms,
   free(neiB);
   free(neiC);
   fprintf(stderr,"%d ntet\n", ntet);
-  fprintf(stderr, "%d nmatch\n", match_len(match));
+  fprintf(stderr, "%d nmatch\n", match_len(matches));
 
   free(Oatoms);
-  return match;
+  return matches;
 }
 
 
@@ -598,7 +598,7 @@ int main(int argc, char* argv[])
   int nunitatoms = LoadAR3R(file, &unitatoms, unitcell);
   fclose(file);
 
-  matchtype* match = matcher_core2(nOatoms,    Oatoms,    cell,
+  match* matches = matcher_core2(nOatoms,    Oatoms,    cell,
 				   nunitatoms, unitatoms, unitcell,
 				   err,
 				   rprox,
@@ -606,8 +606,8 @@ int main(int argc, char* argv[])
 				   1 //nostore
 				   );
   //nostore then useless
-  while ( match != NULL ){
-    matchtype* m = match;
+  while ( matches != NULL ){
+    match* m = matches;
     printf("%f %d %d ", m->rmsd, m->atom_gro, m->atom_unitcell);
     for(int i=0;i<9; i++){
       printf("%f ", m->mat[i]);
@@ -617,7 +617,7 @@ int main(int argc, char* argv[])
       printf("%d ", m->atoms[i]);
     }
     printf("\n");
-    match = m->next;
+    matches = m->next;
     free(m->atoms);
     free(m);
   }
