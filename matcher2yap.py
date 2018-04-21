@@ -133,7 +133,7 @@ while True:
     msd     = float(cols[0])
     Origin  = Oatoms[int(cols[1])].copy()  #atom at the matching center
     # Origin -= np.floor(Origin/Cell+0.5)*Cell
-    Origin -= np.dot(np.floor(np.dot(Origin, np.linalg.inv(Unitcell))+0.5),Unitcell)
+    Origin -= np.dot(np.floor(np.dot(Origin, np.linalg.inv(Unitcell))),Unitcell)
     center  = int(cols[2])
     rotmat  = np.array([float(x) for x in cols[3:12]]).reshape((3,3))
     N = int(cols[12])
