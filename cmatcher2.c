@@ -30,7 +30,7 @@ static struct PyModuleDef moduledef = {
 
 
 //my initializer
-PyMODINIT_FUNC PyInit_cmatcher(void) {
+PyMODINIT_FUNC PyInit_cmatcher2(void) {
   PyObject *m;
   import_array();
   m = PyModule_Create(&moduledef);
@@ -68,41 +68,42 @@ int  not_doublevector(PyArrayObject *mat)  {
 static PyObject *matcher2(PyObject *self, PyObject* args)
 {
   // arguments: Oatoms, cell, radius, rprox, every
-  PyArrayObject *pos, *cell, *unitatoms, *unitcell;
+  PyArrayObject *gatoms, *gcell, *uatoms, *ucell;
   int adjdens;
+  int nostore;
   
   /* Parse tuples separately since args will differ between C fcns */
-  if (!PyArg_ParseTuple(args, "O!O!O!O!i",
-			&PyArray_Type, &pos,
-			&PyArray_Type, &cell,
-			&PyArray_Type, &unitatoms,
-			&PyArray_Type, &unitcell,
-			&adjdens)) return NULL;
-  if (NULL == pos)       return NULL;
-  if (NULL == cell)      return NULL;
-  if (NULL == unitatoms) return NULL;
-  if (NULL == unitcell)  return NULL;
-  if (not_doublematrix(pos))       return NULL;
-  if (not_doublematrix(unitatoms)) return NULL;
-  if (not_doublevector(cell))      return NULL;
-  if (not_doublevector(unitcell))  return NULL;
+  if (!PyArg_ParseTuple(args, "O!O!O!O!ii",
+			&PyArray_Type, &gatoms,
+			&PyArray_Type, &gcell,
+			&PyArray_Type, &uatoms,
+			&PyArray_Type, &ucell,
+			&adjdens,
+                        &nostore)) return NULL;
+  if (NULL == gatoms) return NULL;
+  if (NULL == gcell)  return NULL;
+  if (NULL == uatoms) return NULL;
+  if (NULL == ucell)  return NULL;
+  if (not_doublematrix(gatoms)) return NULL;
+  if (not_doublematrix(uatoms)) return NULL;
+  if (not_doublevector(gcell))  return NULL;
+  if (not_doublevector(ucell))  return NULL;
   /* Get the dimensions of the input */
-  int n=pos->dimensions[0];
-  int nu=unitatoms->dimensions[0];
-
-  double* a = (double*)pos->data;
-  double* c = (double*)cell->data;
-  double* au = (double*)unitatoms->data;
-  double* cu = (double*)unitcell->data;
-  int nostore=0;
-  matchtype* matches = matcher2_core(n, a, c, nu, au, cu, adjdens, nostore);
+  match* matches = matcher2_core(gatoms->dimensions[0],
+                                 (double*)gatoms->data,
+                                 (double*)gcell->data,
+                                 uatoms->dimensions[0],
+                                 (double*)uatoms->data,
+                                 (double*)ucell->data,
+                                 adjdens,
+                                 nostore);
   int nmatches = match_len(matches);
-  //Py_DECREF(pos);
+  //Py_DECREF(gatoms);
   //Py_DECREF(cell);
   //return value is a tuple of tuples.
   PyObject* result = PyTuple_New(nmatches);
   while ( matches != NULL ){
-    matchtype* s = matches;
+    match* s = matches;
     //in reverse order
     nmatches -= 1;
     PyObject* list = PyTuple_New(s->natom);
@@ -117,8 +118,8 @@ static PyObject *matcher2(PyObject *self, PyObject* args)
 		    nmatches,
 		    Py_BuildValue("(fiiOO)",
 				  s->rmsd,
-				  s->atom_gro,
-				  s->atom_unitcell,
+				  s->gcenter,
+				  s->ucenter,
 				  mat,
 				  list));
     matches = s->next;

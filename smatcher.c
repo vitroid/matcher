@@ -114,7 +114,8 @@ int main(int argc, char* argv[])
   FILE *file = fopen(argv[1], "r");
   double rmsdmax;
   sscanf(argv[3], "%lf", &rmsdmax);
-  int nOatoms = LoadGRO(file, &Oatoms, cell);
+  int rel=0;
+  int nOatoms = LoadGRO(file, &Oatoms, cell, rel);
   fclose(file);
 
   double radius = atof(argv[2]);

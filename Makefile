@@ -6,7 +6,7 @@ else
 	DEST=~/.genice
 endif
 LDFLAGS=-lm
-EXE=matcher smatcher matcher2
+EXE=smatcher matcher2
 %.o: %.c %.h
 	$(CC) -std=c99 -c -g -O $< -o $@
 #for tests
@@ -52,6 +52,10 @@ T2.ar3r:
 	genice T2B -f rcom > $@
 T2.gro:
 	genice T2B > $@
+R.gro:
+	genice iceR > $@
+T.gro:
+	genice iceT > $@
 1c.ar3r:
 	genice 1c -r 1 1 1 -d 0.8 -f rcom > $@
 1c.gro:
@@ -67,8 +71,6 @@ test4: 7.gro 1c.gro
 test5: 7.1c.match
 7.1c.match: 1c.gro
 	genice 7 -r 6 6 6 --dens 1.6 -f matcher[1c.gro:0.03:0.06:0] > 7.1c.match
-%.1c.match.yap: %.match 1c.ar3r
-	head $< | ./match2yap.py $*.gro 1c.ar3r > $@
 
 test6: T2x224.gro T2.ar3r
 	./matcher -e 0.01 -r 0.4 T2x224.gro T2.ar3r 
@@ -81,6 +83,15 @@ test9: T2x224.gro T2.gro
 	./matcher2 T2x224.gro T2.gro
 test10: T2x224.gro T2.gro
 	python ./matcher2.py T2x224.gro T2.gro
+T2x224.R.match:T2x224.gro R.gro
+	python ./matcher2.py T2x224.gro R.gro > $@
+%.R.match.yap: %.R.match R.gro
+	./matcher2yap.py -v 0.045 $*.gro R.gro R < $< > $@
+T2x224.T.match:T2x224.gro T.gro
+	python ./matcher2.py T2x224.gro T.gro > $@
+%.T.match.yap: %.T.match T.gro
+	./matcher2yap.py -v 0.06 $*.gro T.gro T < $< > $@
+
 
 
 lattices/T2x22.py:

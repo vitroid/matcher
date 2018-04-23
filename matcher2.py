@@ -4,12 +4,15 @@
 # 巨大な情報を準備する必要がなく、かなり速い。
 # Cにすればもっと速くなるだろう。
 
+__version__ = "0.2"
+
 import sys
 import logging
 import numpy as np
 import yaplotlib as yp
 from collections import defaultdict
 import itertools as it
+import cmatcher2
 
 #note: this is modified. do not reuse.
 def LoadGRO(file, rel=False):
@@ -27,6 +30,7 @@ def LoadGRO(file, rel=False):
     line  = file.readline()
     cols  = line.split()
     cell  = np.array([float(x) for x in cols]) # in nm
+    assert cell.shape[0] == 3
     if rel:
         Os /= cell
         Os -= np.floor(Os+0.5)
@@ -79,20 +83,23 @@ def find_nearest(pos, rprox, addressbook, points):
             rmin = resident
     return rmin, dmin
 
-def main():
-    logging.basicConfig(level=logging.INFO,
-                        format="%(levelname)s %(message)s")
+
+
+def matcher2_python(gatoms, gcell, uatoms, ucell, adjdens=True, nostore=True):
+    """
+    gatoms, uatoms: relative
+    gcell, ucell: orthorhombic
+    """
     logger = logging.getLogger()
-    gcell, gatoms = LoadGRO(open(sys.argv[1]), rel=True)
-    ucell, uatoms = LoadGRO(open(sys.argv[2]), rel=True)
     ng = len(gatoms)
     nu = len(uatoms)
     #uRは単位胞の外接球の半径
-    uR = sum(ucell)/2.0
+    uR = np.sum(ucell)/2.0
     #rproxは近接距離。グリッドのサイズ
     rprox = 0.4
     #まず重ねる点を決める。
-    ucenter = 145
+    ucenter = 0
+    matches = []
     for gcenter in range(ng):
         if int(gcenter*100//ng) != int((gcenter-1)*100/ng):
             logger.info("Progress {0}%".format(int(gcenter*100//ng)))
@@ -102,8 +109,8 @@ def main():
         suatoms = uatoms - uatoms[ucenter]
         suatoms -= np.floor(suatoms+0.5)
         # 絶対座標に変換する
-        sgatoms = sgatoms * gcell # orthorhombic, absolute position
-        suatoms = suatoms * ucell # orthorhombic, absolute position
+        sgatoms *= gcell # orthorhombic, absolute position
+        suatoms *= ucell # orthorhombic, absolute position
         # 住所録を作る
         addressbook = address(sgatoms, rprox)
         # 原点に近い順にソートする。
@@ -134,15 +141,35 @@ def main():
                 if rmsd > 0.1:
                     break
             if rmsd < 0.1:
-                print("{0:.5f}".format(rmsd), gcenter, ucenter, end=" ")
-                for i in range(3):
-                    for j in range(3):
-                        print("{0:.5f}".format(R[i,j]), end=" ")
                 corr = [0]*nu
                 for i in range(nu):
                     corr[uorder[i]] = glist[i]
-                print(nu, *corr)
+                if nostore:
+                    print("{0:.5f}".format(rmsd), gcenter, ucenter, end=" ")
+                    for i in range(3):
+                        for j in range(3):
+                            print("{0:.5f}".format(R[i,j]), end=" ")
+                    print(nu, *corr)
+                else:
+                    matches.append((rmsd, gcenter, ucenter, R, corr))
+    return matches
 
+
+def main():
+    logging.basicConfig(level=logging.INFO,
+                        format="%(levelname)s %(message)s")
+    gcell, gatoms = LoadGRO(open(sys.argv[1]), rel=True)
+    ucell, uatoms = LoadGRO(open(sys.argv[2]), rel=True)
+    for match in cmatcher2.matcher2(gatoms, gcell, uatoms, ucell, True, True):
+    # for match in matcher2_python(gatoms, gcell, uatoms, ucell, adjdens=True, nostore=True):
+        rmsd, gcenter, ucenter, R, corr = match
+        print("{0:.5f}".format(rmsd), gcenter, ucenter, end=" ")
+        for i in range(3):
+            for j in range(3):
+                print("{0:.5f}".format(R[i,j]), end=" ")
+        print(len(corr), corr)
+        
+    
 def test():
     H = np.array([2.0, 3.0, 5.0, 1.0, 4.0, 2.0, 3.0, 5.0, 1.0]).reshape((3,3))
     U,S,Vt = np.linalg.svd(H)

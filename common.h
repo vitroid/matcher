@@ -7,8 +7,8 @@
 typedef struct _matchtype
 {
   double rmsd;
-  int atom_gro;
-  int atom_unitcell;
+  int gcenter;
+  int ucenter;
   double mat[9];
   int natom;
   int* atoms;
@@ -16,7 +16,7 @@ typedef struct _matchtype
 }
   match;
 
-int LoadGRO(FILE* file, double** Oatoms, double* cell);
+int LoadGRO(FILE* file, double** Oatoms, double* cell, int rel);
 double dot(double* x, double* y);
 void sub(double*x, double* y, double* z);
 double vector_length(double x[3]);
@@ -26,4 +26,8 @@ void MakeNeighborList(int natoms, int npairs, int* pairs,
 void MakeNeighborList_hetero(int natoms, int npairs, int* pairs, 
 		      //return values
 		      bnode** nei);
+int match_len(match* s);
+double det(double* A, double* B, double* C);
+void inv(double* A, double* B, double* C);
+
 #endif

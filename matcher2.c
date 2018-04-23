@@ -100,7 +100,6 @@ void quick_proximity(int n, int* order, double* distance, int ntop)
   double pd = distance[order[pivot]];
   int head = 0;
   int tail = n-1;
-  int count=4;
   if ( head >= tail )
     return;
   while ( 1 ){
@@ -193,14 +192,18 @@ void quick_sort(int n, int* order, double* distance)
 
 
 match*
-matcher2_core(int nuatoms,
-              double* uatoms,
-              double ucell[3],
-              int ngatoms,
+matcher2_core(int ngatoms,
               double* gatoms,
               double gcell[3],
+              int nuatoms,
+              double* uatoms,
+              double ucell[3],
               int adjdens,
               int nostore)
+/*
+  uatoms, gatoms: cell-relative
+  ucell, gcell: orthorhombic
+*/
 {
   //密度の調整
   if ( adjdens ){
@@ -213,8 +216,6 @@ matcher2_core(int nuatoms,
     ucell[2] *= ratio;
   }
   match* matches = NULL;
-  // 単位胞の外接球の半径
-  double uR = (ucell[0]+ucell[1]+ucell[2])/2.;
   // 近接距離。グリッドのサイズ
   double rprox = 0.4;
   // まず重ねる点を決める。
@@ -382,8 +383,8 @@ matcher2_core(int nuatoms,
                 else{
                   match* ma = (match*)malloc(sizeof(match));
                   ma->rmsd = rmsd;
-                  ma->atom_gro = gcenter;
-                  ma->atom_unitcell = ucenter;
+                  ma->gcenter = gcenter;
+                  ma->ucenter = ucenter;
                   for(int i=0;i<9;i++){
                     ma->mat[i] = R[i];
                   }
@@ -421,56 +422,19 @@ int main(int argc, char *argv[]){
   double gcell[3];
   double *gatoms;
   FILE *file = fopen(argv[arg], "r");
-  int ngatoms = LoadGRO(file, &gatoms, gcell);
+  int rel=1;
+  int ngatoms = LoadGRO(file, &gatoms, gcell, rel);
   fclose(file);
-  //absolute to relative
-  for(int i=0; i<ngatoms; i++){
-    for(int d=0; d<3; d++){
-      double x = gatoms[i*3+d]/gcell[d];
-      gatoms[i*3+d] = x - floor(x+0.5);
-    }
-  }
-  /* test of abook and find_nearest. it just works.
-  int grid[3] = {10,10,10};
-  sAddressBook* abook = AddressBook(grid, ngatoms, gatoms);
-  double rloc[3] = {0.3, 0.5, 0.5};
-  for(int d=0;d<3;d++){
-    rloc[d] /= gcell[d];
-  }
-  int nearest = find_nearest(rloc, abook, gcell, gatoms);
-  printf("%d %f %f %f\n",nearest,
-	 gatoms[nearest*3+0]*gcell[0],
-	 gatoms[nearest*3+1]*gcell[1],
-	 gatoms[nearest*3+2]*gcell[2]);
-  exit(0);
-  */
-  
+
   double ucell[3];
   double *uatoms;
   file = fopen(argv[arg+1], "r");
-  int nuatoms = LoadGRO(file, &uatoms, ucell);
+  int nuatoms = LoadGRO(file, &uatoms, ucell, rel);
   fclose(file);
-  //absolute to relative
-  for(int i=0; i<nuatoms; i++){
-    for(int d=0; d<3; d++){
-      double x = uatoms[i*3+d]/ucell[d];
-      uatoms[i*3+d] = x - floor(x+0.5);
-    }
-  }
-  /*
-  double distance[]={ 3.0, 9.0, 4.0, 9.0, 5.0, 9.0, 2.0, 6.0, 5.0, 3.0, 5.0, 8.0 };
-  int order[] = {0,1,2,3,4,5,6,7,8,9,10,11};
-  int norder = 12;
-  quick_proximity(norder, order, distance, 4);
-  for(int i=0;i<norder;i++){
-    fprintf(stderr, "%f ", distance[order[i]]);
-  }
-  fprintf(stderr, "\n");
-  exit(0);
-  */
+
   int adjdens = 1;
   int nostore = 1;
-  matcher2_core(nuatoms, uatoms, ucell, ngatoms, gatoms, gcell, adjdens, nostore);
+  matcher2_core(ngatoms, gatoms, gcell, nuatoms, uatoms, ucell, adjdens, nostore);
 }
 
   
