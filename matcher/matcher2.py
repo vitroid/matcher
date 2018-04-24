@@ -172,7 +172,38 @@ def main():
                 print("{0:.5f}".format(R[i,j]), end=" ")
         print(len(corr), corr)
         
+def hook1(lattice):
+    """
+    Slide and match. A format plugin for GenIce.
     
+    usage: genice 7 -f smatcher[radius:rmsdmax]
+
+    matcher plugin accepts several parameters:
+    1st [0.8]    : Radius of matching. (0.8 nm)
+    2nd [0.06]   : Maximum rmsd between ice and template structures. (0.06 nm)
+
+    """
+    lattice.logger.info("Hook1: Template matching.")
+    cellmat = lattice.repcell.mat
+    # simulation box must be orthogonal.
+    assert cellmat[1,0] == 0 and cellmat[2,0] == 0 and cellmat[2,1] == 0
+    assert cellmat[0,2] == 0 and cellmat[0,1] == 0 and cellmat[1,2] == 0
+    gcell = np.array([cellmat[0,0], cellmat[1,1], cellmat[2,2]])
+    gatoms = lattice.reppositions - np.floor(lattice.reppositions)
+    # apos = np.dot(positions, cellmat)
+    adjdens = False
+    nostore = True
+    matches = cmatcher2.matcher2(gatoms, gcell, lattice.uatoms, lattice.ucell, adjdens, nostore)
+    lattice.logger.info("Hook1: end.")
+
+    
+
+def hook0(lattice, arg):
+    args = arg.split(":")
+    lattice.ucell, lattice.uatoms = LoadGRO(open(args[0]), rel=True)
+
+hooks={0:hook0, 1:hook1}
+        
 def test():
     H = np.array([2.0, 3.0, 5.0, 1.0, 4.0, 2.0, 3.0, 5.0, 1.0]).reshape((3,3))
     U,S,Vt = np.linalg.svd(H)

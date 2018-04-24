@@ -14,14 +14,29 @@ with codecs.open(os.path.join(os.path.dirname(__file__), 'matcher', '__init__.py
                  encoding='utf8') as version_file:
     metadata = dict(re.findall(r"""__([a-z]+)__ = "([^"]+)""", version_file.read()))
 
-setup(ext_modules=[Extension("matcher.csmatcher", ["C/csmatcher.c", "C/smatcher.c", "C/bst.c", "C/common.c", "C/pairlist.c"]),
-                   Extension("matcher.cmatcher2", ["C/cmatcher2.c", "C/matcher2.c", "C/bst.c", "C/common.c", "C/pairlist.c", "C/svd.c", "C/neighborlist.c"])],
-      headers=["C/pairlist.h", "C/common.h", "C/bst.h", "C/smatcher.h", "C/svd.h", "C/neighborlist.h", "C/matcher2.h"],
+setup(ext_modules=[Extension("matcher.csmatcher", ["C/csmatcher.c",
+                                                   "C/smatcher.c",
+                                                   "C/bst.c",
+                                                   "C/common.c",
+                                                   "C/pairlist.c"]),
+                   Extension("matcher.cmatcher2", ["C/cmatcher2.c",
+                                                   "C/matcher2.c",
+                                                   "C/bst.c",
+                                                   "C/common.c",
+                                                   "C/pairlist.c",
+                                                   "C/svd.c",
+                                                   "C/neighborlist.c"])],
+      headers=["C/pairlist.h",
+               "C/common.h",
+               "C/bst.h",
+               "C/smatcher.h",
+               "C/svd.h",
+               "C/neighborlist.h",
+               "C/matcher2.h"],
       include_dirs=get_numpy_include_dirs(),
       name='matcher',
       version=metadata['version'],
       zip_safe=False,
-      # py_modules=['smatcher', 'matcher'],
       description='Match atomic environments.',
       #long_description=README + '\n\n' +  CHANGES,
       classifiers=[
@@ -36,17 +51,15 @@ setup(ext_modules=[Extension("matcher.csmatcher", ["C/csmatcher.c", "C/smatcher.
       keywords=['matcher',],
       license='MIT',
       packages=['matcher',],
-#                'genice.molecules',
-#                'genice.lattices',
-#                'genice.formats',
-#                ],
-      install_requires=['numpy',],
+      install_requires=['numpy', 'yaplotlib'],
       entry_points = {
           'genice_format_hook0': [
               'smatcher = matcher.smatcher:hook0',
+              'matcher2 = matcher.matcher2:hook0',
               ],
           'genice_format_hook1': [
               'smatcher = matcher.smatcher:hook1',
+              'matcher2 = matcher.matcher2:hook1',
           ],
           }
 )

@@ -20,7 +20,7 @@ build.:
 	-rm -rf build
 	python setup.py build_ext --inplace
 install:
-	-make clean
+#	-make clean
 	python setup.py install
 pypi: check
 	./setup.py sdist bdist_wheel upload
@@ -56,15 +56,24 @@ pytest1: 7.1c.match2
 # run as an analice plugin
 
 # C and cpython
-ctest1: 7.csmatch 7.1c.cmatch2
-%.csmatch: %.gro
-	C/smatcher 7.gro 8.0 0.1 > $@
-%.1c.cmatch2: 7.gro 1c.gro
+ctest1:
+	-make -C C
+	make -k 7.csmatch 7.1c.cmatch2
+%.csmatch: %.gro C/smatcher
+	C/smatcher 7.gro 0.8 0.1 > $@
+%.1c.cmatch2: 7.gro 1c.gro C/matcher2
 	C/matcher2 $*.gro 1c.gro > $@
 # run as a genice plugin (C)
-ctest2: 7.cgsmatch 7.1c.cgmatch2
-%.cgsmatch: %.gro
-	genice 7 -r 6 6 6 -f smatcher[8.0:0.1] > $@
-%.1c.cgmatch2: 7.gro 1c.gro
-	genice 7 -r 6 6 6 -f matcher2[1c.gro] > $@
+ctest2:
+	make -k 7.cgsmatch 7.1c.cgmatch2
+%.cgsmatch:
+	genice 7 -r 6 6 6 -d 1.6  -f smatcher[0.8:0.1] > $@
+%.1c.cgmatch2: 1c.gro
+	genice 7 -r 6 6 6 -d 1.6  -f matcher2[1c.gro] > $@
 # run as an analice plugin (C)
+ctest3:
+	make -k 7.casmatch 7.1c.camatch2
+%.casmatch: %.gro
+	analice $< -f smatcher[0.8:0.1] > $@
+%.1c.camatch2: %.gro 1c.gro
+	analice $< -f matcher2[1c.gro] > $@

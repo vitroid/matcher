@@ -28,7 +28,7 @@ def LoadGRO(file):
 
 def hook1(lattice):
     """
-    Match a given small unit cell with an ice structure. A format plugin for GenIce.
+    Slide and match. A format plugin for GenIce.
     
     usage: genice 7 -f smatcher[radius:rmsdmax]
 
@@ -47,9 +47,9 @@ def hook1(lattice):
     apos = np.dot(positions, cellmat)
     N = len(positions)**2
     every = 1
-    if N > 10000:
+    if N > 100000:
         #//evaluate only 10 M pairs.
-        every = N//(2*10000)+1
+        every = N//(2*100000)+1
         lattice.logger.info("Too many combinations! Will skip every {0} to reduce time.".format(every))
 
     smatches = smatcher(apos, cell, lattice.smatcher_radius, lattice.smatcher_rmsdmax, every)

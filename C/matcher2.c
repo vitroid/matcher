@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <math.h>
 #include <stdlib.h>
 #include "svd.h"
@@ -418,7 +419,11 @@ matcher2_core(int ngatoms,
 
 int main(int argc, char *argv[]){
   int arg = 1;
-
+  int adjdens = 0;
+  if ( 0 == strncmp(argv[arg], "-a", 2) ){
+    adjdens = 1;
+    arg += 1;
+  }
   double gcell[3];
   double *gatoms;
   FILE *file = fopen(argv[arg], "r");
@@ -432,7 +437,6 @@ int main(int argc, char *argv[]){
   int nuatoms = LoadGRO(file, &uatoms, ucell, rel);
   fclose(file);
 
-  int adjdens = 1;
   int nostore = 1;
   matcher2_core(ngatoms, gatoms, gcell, nuatoms, uatoms, ucell, adjdens, nostore);
 }
