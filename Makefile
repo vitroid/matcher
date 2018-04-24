@@ -47,17 +47,12 @@ T.gro:
 
 # Python
 # run python module directly
-pytest1: 7.smatch 7.1c.match2
-%.smatch: %.gro
-	python matcher/smatcher.py 7.gro 8.0 0.1 > 7.smatch
+pytest1: 7.1c.match2
+# %.smatch: %.gro
+#	python matcher/smatcher.py 7.gro 8.0 0.1 > 7.smatch
 %.1c.match2: 7.gro 1c.gro
-	python matcher/matcher2.py $*.gro 1c.gro > $@
+	python matcher/matcher2.py $*.gro 1c.gro py > $@
 # run as a genice plugin
-pytest2: 7.gsmatch 7.1c.gmatch2
-%.gsmatch: %.gro
-	genice 7 -r 6 6 6 -f smatcher[8.0:0.1] > 7.smatch
-%.1c.gmatch2: 7.gro 1c.gro
-	python matcher/matcher2.py $*.gro 1c.gro > $@
 # run as an analice plugin
 
 # C and cpython
@@ -67,4 +62,9 @@ ctest1: 7.csmatch 7.1c.cmatch2
 %.1c.cmatch2: 7.gro 1c.gro
 	C/matcher2 $*.gro 1c.gro > $@
 # run as a genice plugin (C)
+ctest2: 7.cgsmatch 7.1c.cgmatch2
+%.cgsmatch: %.gro
+	genice 7 -r 6 6 6 -f smatcher[8.0:0.1] > $@
+%.1c.cgmatch2: 7.gro 1c.gro
+	genice 7 -r 6 6 6 -f matcher2[1c.gro] > $@
 # run as an analice plugin (C)

@@ -159,8 +159,12 @@ def main():
                         format="%(levelname)s %(message)s")
     gcell, gatoms = LoadGRO(open(sys.argv[1]), rel=True)
     ucell, uatoms = LoadGRO(open(sys.argv[2]), rel=True)
-    for match in cmatcher2.matcher2(gatoms, gcell, uatoms, ucell, True, True):
-    # for match in matcher2_python(gatoms, gcell, uatoms, ucell, adjdens=True, nostore=True):
+    if len(sys.argv) > 3 and sys.argv[3] == "py":
+        match_iter = matcher2_python(gatoms, gcell, uatoms, ucell, adjdens=True, nostore=True)
+    else:
+        match_iter = cmatcher2.matcher2(gatoms, gcell, uatoms, ucell, True, True)
+        
+    for match in match_iter:
         rmsd, gcenter, ucenter, R, corr = match
         print("{0:.5f}".format(rmsd), gcenter, ucenter, end=" ")
         for i in range(3):
