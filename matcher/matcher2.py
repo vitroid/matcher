@@ -4,7 +4,6 @@
 # 巨大な情報を準備する必要がなく、かなり速い。
 # Cにすればもっと速くなるだろう。
 
-__version__ = "0.2"
 
 import sys
 import logging

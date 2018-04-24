@@ -10,14 +10,13 @@ import re
 #Copied from wheel package
 here = os.path.abspath(os.path.dirname(__file__))
 
-with codecs.open(os.path.join(os.path.dirname(__file__), 'matcher2.py'),
+with codecs.open(os.path.join(os.path.dirname(__file__), 'matcher', '__init__.py'),
                  encoding='utf8') as version_file:
     metadata = dict(re.findall(r"""__([a-z]+)__ = "([^"]+)""", version_file.read()))
 
-setup(ext_modules=[Extension("csmatcher", ["csmatcher.c", "smatcher.c", "bst.c", "common.c", "pairlist.c"]),
-#                   Extension("cmatcher", ["cmatcher.c", "matcher.c", "bst.c", "common.c", "pairlist.c"]),
-                   Extension("cmatcher2", ["cmatcher2.c", "matcher2.c", "bst.c", "common.c", "pairlist.c", "svd.c", "neighborlist.c"])],
-      headers=["pairlist.h", "common.h", "bst.h", "smatcher.h", "svd.h", "neighborlist.h", "matcher2.h"],
+setup(ext_modules=[Extension("matcher.csmatcher", ["C/csmatcher.c", "C/smatcher.c", "C/bst.c", "C/common.c", "C/pairlist.c"]),
+                   Extension("matcher.cmatcher2", ["C/cmatcher2.c", "C/matcher2.c", "C/bst.c", "C/common.c", "C/pairlist.c", "C/svd.c", "C/neighborlist.c"])],
+      headers=["C/pairlist.h", "C/common.h", "C/bst.h", "C/smatcher.h", "C/svd.h", "C/neighborlist.h", "C/matcher2.h"],
       include_dirs=get_numpy_include_dirs(),
       name='matcher',
       version=metadata['version'],
