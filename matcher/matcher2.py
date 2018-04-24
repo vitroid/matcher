@@ -11,7 +11,7 @@ import numpy as np
 import yaplotlib as yp
 from collections import defaultdict
 import itertools as it
-import cmatcher2
+from matcher import cmatcher2
 
 #note: this is modified. do not reuse.
 def LoadGRO(file, rel=False):

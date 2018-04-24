@@ -9,7 +9,7 @@ clean:
 	make -C C clean
 	-rm matcher/*.so
 	-rm -rf build *.egg-info dist
-	-rm *.gro *.ar3r *.match *.smatch
+	-rm *.gro *.ar3r *.match2 *.smatch *.cmatch2 *.csmatch
 	-rm *~ matcher/*~
 
 #python
@@ -19,12 +19,9 @@ build.:
 	-rm *.so
 	-rm -rf build
 	python setup.py build_ext --inplace
-install: matcher.py
+install:
 	-make clean
 	python setup.py install
-	install -d $(DEST)
-	install -d $(DEST)/formats
-	install smatcher.py matcher.py $(DEST)/formats
 pypi: check
 	./setup.py sdist bdist_wheel upload
 
@@ -47,34 +44,27 @@ T.gro:
 	genice 1c -r 1 1 1 -d 0.8 -f rcom > $@
 1c.gro:
 	genice 1c -r 1 1 1 -d 0.8 > $@
-test2: 7.gro
-	python ./smatcher.py 7.gro 8.0 0.06 > test2.smatch
-test4: 7.gro 1c.gro
-	python ./matcher.py 7.gro 1c.gro 0.03 0.06 > test4.1c.match
-test5: 7.1c.match
-7.1c.match: 1c.gro
-	genice 7 -r 6 6 6 --dens 1.6 -f matcher[1c.gro:0.03:0.06:0] > 7.1c.match
 
-test7: T2x224.gro T2.gro
-	python ./matcher.py T2x224.gro T2.gro 0.01 0.4 
-test8: T2x224.gro T2.gro  # use with analice
-	analice T2x224.gro -f matcher[T2.gro:0.01:0.4]
+# Python
+# run python module directly
+pytest1: 7.smatch 7.1c.match2
+%.smatch: %.gro
+	python matcher/smatcher.py 7.gro 8.0 0.1 > 7.smatch
+%.1c.match2: 7.gro 1c.gro
+	python matcher/matcher2.py $*.gro 1c.gro > $@
+# run as a genice plugin
+pytest2: 7.gsmatch 7.1c.gmatch2
+%.gsmatch: %.gro
+	genice 7 -r 6 6 6 -f smatcher[8.0:0.1] > 7.smatch
+%.1c.gmatch2: 7.gro 1c.gro
+	python matcher/matcher2.py $*.gro 1c.gro > $@
+# run as an analice plugin
 
-test10: T2x224.gro T2.gro
-	python ./matcher2.py T2x224.gro T2.gro
-T2x224.R.match:T2x224.gro R.gro
-	python ./matcher2.py T2x224.gro R.gro > $@
-%.R.match.yap: %.R.match R.gro
-	./matcher2yap.py -v 0.045 $*.gro R.gro R < $< > $@
-T2x224.T.match:T2x224.gro T.gro
-	python ./matcher2.py T2x224.gro T.gro > $@
-%.T.match.yap: %.T.match T.gro
-	./matcher2yap.py -v 0.06 $*.gro T.gro T < $< > $@
-
-
-
-lattices/T2x22.py:
-	genice T2B -f reshape[1,1,0,-1,1,0,0,0,2] --add_noise 1 > $@
-T2x22.gro:
-	genice T2x22 > $@
-
+# C and cpython
+ctest1: 7.csmatch 7.1c.cmatch2
+%.csmatch: %.gro
+	C/smatcher 7.gro 8.0 0.1 > $@
+%.1c.cmatch2: 7.gro 1c.gro
+	C/matcher2 $*.gro 1c.gro > $@
+# run as a genice plugin (C)
+# run as an analice plugin (C)

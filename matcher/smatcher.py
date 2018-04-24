@@ -3,7 +3,7 @@
 
 import sys
 import numpy as np
-from csmatcher import smatcher
+from matcher.csmatcher import smatcher
 
 
 #note: this is modified. do not reuse.
@@ -52,7 +52,7 @@ def hook1(lattice):
         every = N//(2*10000)+1
         lattice.logger.info("Too many combinations! Will skip every {0} to reduce time.".format(every))
 
-    smatches = smatcher(apos, cell, radius, rmsdmax, every)
+    smatches = smatcher(apos, cell, lattice.smatcher_radius, lattice.smatcher_rmsdmax, every)
     for smatch in smatches:
         i, j, rad, d, rmsd = smatch
         s = "{0} {1} {2:.4f} ".format(i, j, rad)
@@ -63,15 +63,15 @@ def hook1(lattice):
     lattice.logger.info("Hook1: end.")
 
     
-radius  = 0.8  # nm
-rmsdmax = 0.06 # nm
 
-def argparser(arg):
-    global radius, rmsdmax
-    cols = arg.split(":")
-    radius  = float(cols[0])
-    if len(cols)>1:
-        rmsdmax = float(cols[1])
+def hook0(lattice, arg):
+    lattice.smatcher_radius  = 0.8  # nm
+    lattice.smatcher_rmsdmax = 0.06 # nm
+    if arg != "":
+        cols = arg.split(":")
+        lattice.smatcher_radius  = float(cols[0])
+        if len(cols)>1:
+            lattice.smatcher_rmsdmax = float(cols[1])
 
 
 
@@ -94,4 +94,4 @@ if __name__ == "__main__":
     test()
 
 
-hooks = {1:hook1}
+hooks = {0:hook0, 1:hook1}

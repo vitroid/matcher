@@ -35,15 +35,18 @@ setup(ext_modules=[Extension("matcher.csmatcher", ["C/csmatcher.c", "C/smatcher.
       url='https://github.com/vitroid/matcher/',
       keywords=['matcher',],
       license='MIT',
-#      packages=['pairlist',],
+      packages=['matcher',],
 #                'genice.molecules',
 #                'genice.lattices',
 #                'genice.formats',
 #                ],
       install_requires=['numpy',],
-#      entry_points = {
-#              'console_scripts': [
-#                  'pairlist = pairlist:main'
-#              ]
-#          }
+      entry_points = {
+          'genice_format_hook0': [
+              'smatcher = matcher.smatcher:hook0',
+              ],
+          'genice_format_hook1': [
+              'smatcher = matcher.smatcher:hook1',
+          ],
+          }
 )
