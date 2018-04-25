@@ -176,13 +176,13 @@ while True:
         s += drawbox(Origin,RotUnitcell,halfshift=True)
         # unit cell
         s += yp.Layer(2)
-        s += drawbox(Boxslide,RotUnitcell,halfshift=True)
+        s += drawbox(Boxslide,RotUnitcell,halfshift=False)
 
-        s += yp.Layer(2)
+        #s += yp.Layer(2)
         #s += drawbox2(Boxslide,RotUnitcell)
 
-        s += yp.Layer(3)
-        s += yp.Size(0.3)
+        #s += yp.Layer(3)
+        #s += yp.Size(0.4)
     
         #s += yp.Color(4)
         #s += drawatoms(Slidunit)
@@ -195,7 +195,7 @@ while True:
         #    s += yp.Line(g, g+d)
         #    # 変位ベクトルはどうやってもうまくいかないので、やめる。
 
-s += yp.Size(0.3)
+s += yp.Size(0.4)
 s += yp.Color(4)
 s += yp.Layer(3)
 s += drawatoms(Oatoms, members=matched)
