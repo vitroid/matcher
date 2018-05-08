@@ -23,7 +23,7 @@ install:
 #	-make clean
 	python setup.py install
 pypi: check
-	./setup.py sdist bdist_wheel upload
+	python setup.py sdist bdist_wheel upload
 
 
 #end python

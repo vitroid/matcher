@@ -77,126 +77,130 @@ def usage():
     print("usage: {0} [-a][-e every][-v maxval] traj.gro pattern.gro < matcher.output")
     sys.exit(1)
     
-every = 1
-maxval = 1.0
-adjdens = False
-while sys.argv[1][0] == "-":
-    if sys.argv[1] == "-e":
-        every = int(sys.argv[2])
-        sys.argv.pop(1)
-        sys.argv.pop(1)
-    elif sys.argv[1] == "-v":
-        maxval = float(sys.argv[2])
-        sys.argv.pop(1)
-        sys.argv.pop(1)
-    elif sys.argv[1] == "-a":
-        adjdens = True
-        sys.argv.pop(1)
-    else:
-        usage()
-    
-Cell, Oatoms = LoadGRO(open(sys.argv[1]))  # in AA, in AA
-Unitcell, Unitatoms = LoadGRO(open(sys.argv[2])) # in AA, in rel
-dens0 = Oatoms.shape[0] / np.linalg.det(Cell)
-dens1 = Unitatoms.shape[0] / np.linalg.det(Unitcell)
-ratio = (dens1/dens0)**(1./3.)
-if adjdens:
-    Unitcell *= ratio
+def main():
+    every = 1
+    maxval = 1.0
+    adjdens = False
+    while sys.argv[1][0] == "-":
+        if sys.argv[1] == "-e":
+            every = int(sys.argv[2])
+            sys.argv.pop(1)
+            sys.argv.pop(1)
+        elif sys.argv[1] == "-v":
+            maxval = float(sys.argv[2])
+            sys.argv.pop(1)
+            sys.argv.pop(1)
+        elif sys.argv[1] == "-a":
+            adjdens = True
+            sys.argv.pop(1)
+        else:
+            usage()
 
-mode = ""
-if len(sys.argv) > 3:
-    mode = sys.argv[3]
+    Cell, Oatoms = LoadGRO(open(sys.argv[1]))  # in AA, in AA
+    Unitcell, Unitatoms = LoadGRO(open(sys.argv[2])) # in AA, in rel
+    dens0 = Oatoms.shape[0] / np.linalg.det(Cell)
+    dens1 = Unitatoms.shape[0] / np.linalg.det(Unitcell)
+    ratio = (dens1/dens0)**(1./3.)
+    if adjdens:
+        Unitcell *= ratio
 
-s = ""
-s += yp.Color(2)
-s += yp.Layer(1)
-origin = np.zeros(3)
-s += drawbox(origin,Cell,halfshift=False)
-#in absolute coord
-# unitatoms = np.dot(unitatoms, Unitcell)
-#s += unitatoms)
-    
-#s = ""
-palette = dict()
-matched = set()
-nline = 0
-while True:
-    line = sys.stdin.readline()
-    if len(line) == 0:
-        break
-    nline += 1
-    #parse the line
-    cols = line.split()
-    if len(cols) < 13:
-        break
-    # 2018-4-9 New output format of matcher.c
-    msd     = float(cols[0])
-    Origin  = Oatoms[int(cols[1])].copy()  #atom at the matching center
-    # Origin -= np.floor(Origin/Cell+0.5)*Cell
-    celli = np.linalg.inv(Cell)
-    relorigin = np.dot(Origin, celli)
-    relorigin -= np.floor(relorigin)
-    Origin = np.dot(relorigin, Cell)
-    center  = int(cols[2])
-    rotmat  = np.array([float(x) for x in cols[3:12]]).reshape((3,3))
-    N = int(cols[12])
-    if len(cols) < 13+N:
-        break
-    irot = np.linalg.inv(rotmat)
-    members = [int(x) for x in cols[13:N+13]]
-    #draw matched box
+    mode = ""
+    if len(sys.argv) > 3:
+        mode = sys.argv[3]
 
-    # roll the unit cell to center (abs)
-    rel = Unitatoms - Unitatoms[center]
-    rel -= np.dot(np.floor(np.dot(rel, np.linalg.inv(Unitcell))+0.5),Unitcell)
-    # rel to abs
-    Slid = rel
-    # rotate box
-    RotUnitcell       = np.dot(Unitcell, rotmat)
-    # 
-    Boxslide = np.dot(-Unitatoms[center], rotmat) + Origin
-    # rotate atoms in the unit cell
-    Slidunit    = np.dot(Slid, rotmat) + Origin
-    #s += yp.Color(3)
-    if mode == "R":
-        color = direction2color(rotmat[0]+rotmat[1]+rotmat[2])
-    elif mode == "T":
-        color = direction2color(rotmat[2])
-    else:
-        color = (0,3,0) #green
-    if color not in palette:
-        palette[color] = len(palette)+5
-        s += yp.SetPalette(palette[color],color[0]*255//3,color[1]*255//3,color[2]*255//3)
-    if msd < maxval:
-        matched |= set(members)
-    if every != 0 and nline % every == 0 and msd < maxval:
-        s += yp.Color(palette[color])
-        # matched box
-        s += yp.Layer(4)
-        s += drawbox(Origin,RotUnitcell,halfshift=True)
-        # unit cell
-        s += yp.Layer(2)
-        s += drawbox(Boxslide,RotUnitcell,halfshift=False)
+    s = ""
+    s += yp.Color(2)
+    s += yp.Layer(1)
+    origin = np.zeros(3)
+    s += drawbox(origin,Cell,halfshift=False)
+    #in absolute coord
+    # unitatoms = np.dot(unitatoms, Unitcell)
+    #s += unitatoms)
 
-        #s += yp.Layer(2)
-        #s += drawbox2(Boxslide,RotUnitcell)
+    #s = ""
+    palette = dict()
+    matched = set()
+    nline = 0
+    while True:
+        line = sys.stdin.readline()
+        if len(line) == 0:
+            break
+        nline += 1
+        #parse the line
+        cols = line.split()
+        if len(cols) < 13:
+            break
+        # 2018-4-9 New output format of matcher.c
+        msd     = float(cols[0])
+        Origin  = Oatoms[int(cols[1])].copy()  #atom at the matching center
+        # Origin -= np.floor(Origin/Cell+0.5)*Cell
+        celli = np.linalg.inv(Cell)
+        relorigin = np.dot(Origin, celli)
+        relorigin -= np.floor(relorigin)
+        Origin = np.dot(relorigin, Cell)
+        center  = int(cols[2])
+        rotmat  = np.array([float(x) for x in cols[3:12]]).reshape((3,3))
+        N = int(cols[12])
+        if len(cols) < 13+N:
+            break
+        irot = np.linalg.inv(rotmat)
+        members = [int(x) for x in cols[13:N+13]]
+        #draw matched box
 
-        #s += yp.Layer(3)
-        #s += yp.Size(0.4)
-    
-        #s += yp.Color(4)
-        #s += drawatoms(Slidunit)
-        #for i in range(len(Slidunit)):
-        #    g = Oatoms[members[i]] - Origin
-        #    g -= np.floor(g/Cell+0.5)*Cell
-        #    g += Origin
-        #    d = Slidunit[i] - g
-        #    d -= np.floor(d/Cell+0.5)*Cell
-        #    s += yp.Line(g, g+d)
-        #    # 変位ベクトルはどうやってもうまくいかないので、やめる。
+        # roll the unit cell to center (abs)
+        rel = Unitatoms - Unitatoms[center]
+        rel -= np.dot(np.floor(np.dot(rel, np.linalg.inv(Unitcell))+0.5),Unitcell)
+        # rel to abs
+        Slid = rel
+        # rotate box
+        RotUnitcell       = np.dot(Unitcell, rotmat)
+        # 
+        Boxslide = np.dot(-Unitatoms[center], rotmat) + Origin
+        # rotate atoms in the unit cell
+        Slidunit    = np.dot(Slid, rotmat) + Origin
+        #s += yp.Color(3)
+        if mode == "R":
+            color = direction2color(rotmat[0]+rotmat[1]+rotmat[2])
+        elif mode == "T":
+            color = direction2color(rotmat[2])
+        else:
+            color = (0,3,0) #green
+        if color not in palette:
+            palette[color] = len(palette)+5
+            s += yp.SetPalette(palette[color],color[0]*255//3,color[1]*255//3,color[2]*255//3)
+        if msd < maxval:
+            matched |= set(members)
+        if every != 0 and nline % every == 0 and msd < maxval:
+            s += yp.Color(palette[color])
+            # matched box
+            s += yp.Layer(4)
+            s += drawbox(Origin,RotUnitcell,halfshift=True)
+            # unit cell
+            s += yp.Layer(2)
+            s += drawbox(Boxslide,RotUnitcell,halfshift=False)
 
-s += yp.Size(0.4)
-s += yp.Color(4)
-s += yp.Layer(3)
-s += drawatoms(Oatoms, members=matched)
-print(s) # end of frame
+            #s += yp.Layer(2)
+            #s += drawbox2(Boxslide,RotUnitcell)
+
+            #s += yp.Layer(3)
+            #s += yp.Size(0.4)
+
+            #s += yp.Color(4)
+            #s += drawatoms(Slidunit)
+            #for i in range(len(Slidunit)):
+            #    g = Oatoms[members[i]] - Origin
+            #    g -= np.floor(g/Cell+0.5)*Cell
+            #    g += Origin
+            #    d = Slidunit[i] - g
+            #    d -= np.floor(d/Cell+0.5)*Cell
+            #    s += yp.Line(g, g+d)
+            #    # 変位ベクトルはどうやってもうまくいかないので、やめる。
+
+    s += yp.Size(0.4)
+    s += yp.Color(4)
+    s += yp.Layer(3)
+    s += drawatoms(Oatoms, members=matched)
+    print(s) # end of frame
+
+if __name__ = "__main__":
+    main()

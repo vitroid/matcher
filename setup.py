@@ -34,7 +34,7 @@ setup(ext_modules=[Extension("matcher.csmatcher", ["C/csmatcher.c",
                "C/neighborlist.h",
                "C/matcher2.h"],
       include_dirs=get_numpy_include_dirs(),
-      name='matcher',
+      name='genice_matcher',
       version=metadata['version'],
       zip_safe=False,
       description='Match atomic environments.',
@@ -61,5 +61,10 @@ setup(ext_modules=[Extension("matcher.csmatcher", ["C/csmatcher.c",
               'smatcher = matcher.smatcher:hook1',
               'matcher2 = matcher.matcher2:hook1',
           ],
+          'console_scripts': [
+              'matcher-visualize = matcher.matcher2yap:main',
+              'smatcher-visualize = matcher.smatcher2yap:main',
+          ],
+          
           }
 )
