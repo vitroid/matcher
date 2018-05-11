@@ -36,9 +36,9 @@ def direction2color(v, digitize=4):
     return R,G,B
 
 
-def drawbox(origin, box, halfshift=True):
     s = ""
     if halfshift:
+def drawbox(origin, box, halfshift=True):
         center = (box[0] + box[1] + box[2])/2
         ori = origin - center
     else:
@@ -83,8 +83,8 @@ def main():
     adjdens = False
     while sys.argv[1][0] == "-":
         if sys.argv[1] == "-e":
-            every = int(sys.argv[2])
             sys.argv.pop(1)
+            every = int(sys.argv[2])
             sys.argv.pop(1)
         elif sys.argv[1] == "-v":
             maxval = float(sys.argv[2])
@@ -95,14 +95,13 @@ def main():
             sys.argv.pop(1)
         else:
             usage()
-
-    Cell, Oatoms = LoadGRO(open(sys.argv[1]))  # in AA, in AA
-    Unitcell, Unitatoms = LoadGRO(open(sys.argv[2])) # in AA, in rel
-    dens0 = Oatoms.shape[0] / np.linalg.det(Cell)
-    dens1 = Unitatoms.shape[0] / np.linalg.det(Unitcell)
+    gcell, gatoms = LoadGRO(open(sys.argv[1]))  # in AA, in AA
+    ucell, uatoms = LoadGRO(open(sys.argv[2])) # in AA
+    dens0 = gatoms.shape[0] / np.product(gcell)
+    dens1 = uatoms.shape[0] / np.product(ucell)
     ratio = (dens1/dens0)**(1./3.)
     if adjdens:
-        Unitcell *= ratio
+        ucell *= ratio
 
     mode = ""
     if len(sys.argv) > 3:
@@ -112,15 +111,15 @@ def main():
     s += yp.Color(2)
     s += yp.Layer(1)
     origin = np.zeros(3)
-    s += drawbox(origin,Cell,halfshift=False)
+    s += drawbox(origin,np.diag(gcell),halfshift=False)
     #in absolute coord
-    # unitatoms = np.dot(unitatoms, Unitcell)
+    # unitatoms = np.dot(unitatoms, ucell)
     #s += unitatoms)
 
     #s = ""
-    palette = dict()
-    matched = set()
     nline = 0
+    matched = set()
+    palette = dict()
     while True:
         line = sys.stdin.readline()
         if len(line) == 0:
@@ -132,13 +131,9 @@ def main():
             break
         # 2018-4-9 New output format of matcher.c
         msd     = float(cols[0])
-        Origin  = Oatoms[int(cols[1])].copy()  #atom at the matching center
-        # Origin -= np.floor(Origin/Cell+0.5)*Cell
-        celli = np.linalg.inv(Cell)
-        relorigin = np.dot(Origin, celli)
-        relorigin -= np.floor(relorigin)
-        Origin = np.dot(relorigin, Cell)
-        center  = int(cols[2])
+        gcenter  = gatoms[int(cols[1])].copy()  #atom at the matching center
+        gcenter -= np.floor(gcenter/gcell)*gcell
+        ucenter  = int(cols[2])
         rotmat  = np.array([float(x) for x in cols[3:12]]).reshape((3,3))
         N = int(cols[12])
         if len(cols) < 13+N:
@@ -148,16 +143,16 @@ def main():
         #draw matched box
 
         # roll the unit cell to center (abs)
-        rel = Unitatoms - Unitatoms[center]
-        rel -= np.dot(np.floor(np.dot(rel, np.linalg.inv(Unitcell))+0.5),Unitcell)
+        rel = uatoms - uatoms[ucenter]
+        rel -= np.floor(rel/ucell+0.5)*ucell
         # rel to abs
         Slid = rel
         # rotate box
-        RotUnitcell       = np.dot(Unitcell, rotmat)
+        Rotucell       = np.dot(np.diag(ucell), rotmat)
         # 
-        Boxslide = np.dot(-Unitatoms[center], rotmat) + Origin
+        Boxslide = np.dot(-uatoms[ucenter], rotmat) + gcenter
         # rotate atoms in the unit cell
-        Slidunit    = np.dot(Slid, rotmat) + Origin
+        Slidunit    = np.dot(Slid, rotmat) + gcenter
         #s += yp.Color(3)
         if mode == "R":
             color = direction2color(rotmat[0]+rotmat[1]+rotmat[2])
@@ -166,7 +161,7 @@ def main():
         else:
             color = (0,3,0) #green
         if color not in palette:
-            palette[color] = len(palette)+5
+            palette[color] = len(palette)+6
             s += yp.SetPalette(palette[color],color[0]*255//3,color[1]*255//3,color[2]*255//3)
         if msd < maxval:
             matched |= set(members)
@@ -174,33 +169,31 @@ def main():
             s += yp.Color(palette[color])
             # matched box
             s += yp.Layer(4)
-            s += drawbox(Origin,RotUnitcell,halfshift=True)
-            # unit cell
+            s += drawbox(gcenter,Rotucell,halfshift=True)
             s += yp.Layer(2)
-            s += drawbox(Boxslide,RotUnitcell,halfshift=False)
+            # unit cell
+            s += drawbox(Boxslide,Rotucell,halfshift=True)
 
-            #s += yp.Layer(2)
-            #s += drawbox2(Boxslide,RotUnitcell)
+            s += yp.Layer(2)
+            #s += drawbox2(Boxslide,Rotucell)
 
-            #s += yp.Layer(3)
-            #s += yp.Size(0.4)
+            s += yp.Layer(5)
 
-            #s += yp.Color(4)
-            #s += drawatoms(Slidunit)
-            #for i in range(len(Slidunit)):
-            #    g = Oatoms[members[i]] - Origin
-            #    g -= np.floor(g/Cell+0.5)*Cell
-            #    g += Origin
-            #    d = Slidunit[i] - g
-            #    d -= np.floor(d/Cell+0.5)*Cell
-            #    s += yp.Line(g, g+d)
-            #    # 変位ベクトルはどうやってもうまくいかないので、やめる。
+            s += yp.Size(0.3)
+            s += yp.Color(5)
+            s += drawatoms(Slidunit)
+            for i in range(len(Slidunit)):
+                g = gatoms[members[i]]
+                d = Slidunit[i] - gatoms[members[i]]
+                d -= np.floor(d/gcell+0.5)*gcell
+                s += yp.Line(g, g+d)
+                # 変位ベクトルはどうやってもうまくいかないので、やめる。
 
-    s += yp.Size(0.4)
+    s += yp.Size(0.3)
     s += yp.Color(4)
     s += yp.Layer(3)
-    s += drawatoms(Oatoms, members=matched)
+    s += drawatoms(gatoms, members=matched)
     print(s) # end of frame
-
+  
 if __name__ = "__main__":
     main()
