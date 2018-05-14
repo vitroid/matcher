@@ -14,6 +14,10 @@ with codecs.open(os.path.join(os.path.dirname(__file__), 'matcher', '__init__.py
                  encoding='utf8') as version_file:
     metadata = dict(re.findall(r"""__([a-z]+)__ = "([^"]+)""", version_file.read()))
 
+
+
+long_desc = "".join(open("README.md").readlines())
+
 setup(ext_modules=[Extension("matcher.csmatcher", ["C/csmatcher.c",
                                                    "C/smatcher.c",
                                                    "C/bst.c",
@@ -38,7 +42,8 @@ setup(ext_modules=[Extension("matcher.csmatcher", ["C/csmatcher.c",
       version=metadata['version'],
       zip_safe=False,
       description='Match atomic environments.',
-      #long_description=README + '\n\n' +  CHANGES,
+      long_description=long_desc,
+      long_description_content_type="text/markdown",
       classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",

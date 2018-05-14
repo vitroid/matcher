@@ -202,5 +202,5 @@ def main():
     s += drawatoms(Oatoms, members=matched)
     print(s) # end of frame
 
-if __name__ = "__main__":
+if __name__ == "__main__":
     main()
