@@ -194,6 +194,6 @@ def main():
     s += yp.Layer(3)
     s += drawatoms(gatoms, members=matched)
     print(s) # end of frame
-  
-if __name__ = "__main__":
+
+if __name__ == "__main__":
     main()

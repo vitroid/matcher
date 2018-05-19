@@ -68,6 +68,7 @@ smatchtype* smatcher_core(int nOatoms, double* Oatoms, double* cell, double radi
 	}
 	sumsqdev += dmin;
       }
+      free(qnei);
       double msd = sumsqdev / size(nei[p]); //msd in nm**2
       double rmsd = sqrt(msd);
       if ( rmsd < rmsdmax ){
@@ -83,7 +84,6 @@ smatchtype* smatcher_core(int nOatoms, double* Oatoms, double* cell, double radi
 	s->rmsd = rmsd;
 	smatch = s;
       }
-      free(qnei);
       //return smatch;
     }
     free(pnei);
