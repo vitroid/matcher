@@ -36,9 +36,9 @@ def direction2color(v, digitize=4):
     return R,G,B
 
 
+def drawbox(origin, box, halfshift=True):
     s = ""
     if halfshift:
-def drawbox(origin, box, halfshift=True):
         center = (box[0] + box[1] + box[2])/2
         ori = origin - center
     else:
@@ -76,7 +76,7 @@ def drawatoms(atoms, members=None):
 def usage():
     print("usage: {0} [-a][-e every][-v maxval] traj.gro pattern.gro < matcher.output")
     sys.exit(1)
-    
+
 def main():
     every = 1
     maxval = 1.0
@@ -97,8 +97,11 @@ def main():
             usage()
     gcell, gatoms = LoadGRO(open(sys.argv[1]))  # in AA, in AA
     ucell, uatoms = LoadGRO(open(sys.argv[2])) # in AA
-    dens0 = gatoms.shape[0] / np.product(gcell)
-    dens1 = uatoms.shape[0] / np.product(ucell)
+    gcelli = np.linalg.inv(gcell)
+    ucelli = np.linalg.inv(ucell)
+    dens0 = gatoms.shape[0] / np.linalg.det(gcell)
+    dens1 = uatoms.shape[0] / np.linalg.det(ucell)
+    print(dens0, dens1, file=sys.stderr)
     ratio = (dens1/dens0)**(1./3.)
     if adjdens:
         ucell *= ratio
@@ -111,7 +114,7 @@ def main():
     s += yp.Color(2)
     s += yp.Layer(1)
     origin = np.zeros(3)
-    s += drawbox(origin,np.diag(gcell),halfshift=False)
+    s += drawbox(origin,gcell,halfshift=False)
     #in absolute coord
     # unitatoms = np.dot(unitatoms, ucell)
     #s += unitatoms)
@@ -132,7 +135,7 @@ def main():
         # 2018-4-9 New output format of matcher.c
         msd     = float(cols[0])
         gcenter  = gatoms[int(cols[1])].copy()  #atom at the matching center
-        gcenter -= np.floor(gcenter/gcell)*gcell
+        gcenter -= np.floor(gcenter@gcelli)@gcell
         ucenter  = int(cols[2])
         rotmat  = np.array([float(x) for x in cols[3:12]]).reshape((3,3))
         N = int(cols[12])
@@ -144,12 +147,12 @@ def main():
 
         # roll the unit cell to center (abs)
         rel = uatoms - uatoms[ucenter]
-        rel -= np.floor(rel/ucell+0.5)*ucell
+        rel -= np.floor(rel @ucelli+0.5)@ucell
         # rel to abs
         Slid = rel
         # rotate box
-        Rotucell       = np.dot(np.diag(ucell), rotmat)
-        # 
+        Rotucell       = np.dot(ucell, rotmat)
+        #
         Boxslide = np.dot(-uatoms[ucenter], rotmat) + gcenter
         # rotate atoms in the unit cell
         Slidunit    = np.dot(Slid, rotmat) + gcenter
@@ -185,7 +188,7 @@ def main():
             for i in range(len(Slidunit)):
                 g = gatoms[members[i]]
                 d = Slidunit[i] - gatoms[members[i]]
-                d -= np.floor(d/gcell+0.5)*gcell
+                d -= np.floor(d@gcelli+0.5)@gcell
                 s += yp.Line(g, g+d)
                 # 変位ベクトルはどうやってもうまくいかないので、やめる。
 

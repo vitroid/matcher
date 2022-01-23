@@ -18,17 +18,17 @@ clean:
 	-rm $(EXE)
 
 7.gro:
-	genice 7 -r 6 6 6 -d 1.6> $@
+	genice2 7 -r 6 6 6 -d 1.6> $@
 T2x224.gro:
-	genice T2B -r 2 2 4 --add_noise 1 > $@
+	genice2 iceT2 -r 2 2 4 --add_noise 1 --depol=optimal > $@
 T2.ar3r:
-	genice T2B -f rcom > $@
+	genice2 iceT2 -f rcom --depol=optimal > $@
 T2.gro:
-	genice T2B > $@
+	genice2 iceT2 --depol=optimal > $@
 1c.ar3r:
-	genice 1c -r 1 1 1 -d 0.8 -f rcom > $@
+	genice2 1c -r 1 1 1 -d 0.8 -f rcom > $@
 1c.gro:
-	genice 1c -r 1 1 1 -d 0.8 > $@
+	genice2 1c -r 1 1 1 -d 0.8 > $@
 
 
 test: 7.gro
@@ -37,10 +37,8 @@ test3: 7.1c.match22
 7.1c.match22: 7.gro 1c.gro
 	./matcher2 7.gro 1c.gro > $@
 test5: 7.1c.match22.yap
-%.1c.match22.yap: %.1c.match22 1c.gro
-	head $< | ../matcher/matcher2yap.py $*.gro 1c.gro > $@
+%.1c.match22.yap: %.1c.match22 1c.gro ../matcher/matcher2yap.py Makefile
+	head $< | ../matcher/matcher2yap.py -v 0.05 $*.gro 1c.gro > $@
 
 test6: T2x224.gro T2.gro
 	./matcher2 T2x224.gro T2.gro
-
-
