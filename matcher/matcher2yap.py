@@ -3,6 +3,7 @@
 import numpy as np
 import sys
 import yaplotlib as yp
+from  logging import INFO, basicConfig, getLogger
 
 def LoadGRO(file):
     line = file.readline()
@@ -78,6 +79,9 @@ def usage():
     sys.exit(1)
 
 def main():
+    basicConfig(level=INFO,
+                        format="%(levelname)s %(message)s")
+    logger = getLogger()
     every = 1
     maxval = 1.0
     adjdens = False
@@ -97,14 +101,15 @@ def main():
             usage()
     gcell, gatoms = LoadGRO(open(sys.argv[1]))  # in AA, in AA
     ucell, uatoms = LoadGRO(open(sys.argv[2])) # in AA
-    gcelli = np.linalg.inv(gcell)
-    ucelli = np.linalg.inv(ucell)
     dens0 = gatoms.shape[0] / np.linalg.det(gcell)
     dens1 = uatoms.shape[0] / np.linalg.det(ucell)
-    print(dens0, dens1, file=sys.stderr)
     ratio = (dens1/dens0)**(1./3.)
     if adjdens:
+        logger.info(f"Scaling ratio: {ratio}")
         ucell *= ratio
+        uatoms *= ratio
+    gcelli = np.linalg.inv(gcell)
+    ucelli = np.linalg.inv(ucell)
 
     mode = ""
     if len(sys.argv) > 3:
@@ -151,11 +156,11 @@ def main():
         # rel to abs
         Slid = rel
         # rotate box
-        Rotucell       = np.dot(ucell, rotmat)
+        Rotucell       = ucell @ rotmat
         #
-        Boxslide = np.dot(-uatoms[ucenter], rotmat) + gcenter
+        Boxslide = -uatoms[ucenter] @ rotmat + gcenter
         # rotate atoms in the unit cell
-        Slidunit    = np.dot(Slid, rotmat) + gcenter
+        Slidunit    = (Slid @ rotmat) + gcenter
         #s += yp.Color(3)
         if mode == "R":
             color = direction2color(rotmat[0]+rotmat[1]+rotmat[2])
@@ -173,9 +178,9 @@ def main():
             # matched box
             s += yp.Layer(4)
             s += drawbox(gcenter,Rotucell,halfshift=True)
-            s += yp.Layer(2)
-            # unit cell
-            s += drawbox(Boxslide,Rotucell,halfshift=True)
+            # s += yp.Layer(2)
+            # # unit cell
+            # s += drawbox(Boxslide,Rotucell,halfshift=True)
 
             s += yp.Layer(2)
             #s += drawbox2(Boxslide,Rotucell)

@@ -2,7 +2,7 @@
 //https://github.com/numpy/numpy/blob/master/numpy/core/src/dummymodule.c
 //https://qiita.com/junkoda/items/17df11d7a20dc9d50e7d
 
-#include "Python.h"
+#include <Python.h>
 #include <numpy/arrayobject.h>
 #include <math.h>
 #include "matcher2.h"
@@ -44,7 +44,7 @@ PyMODINIT_FUNC PyInit_cmatcher2(void) {
 //taken from C_arraytest.c in Scipy.
 
 /* ==== Check that PyArrayObject is a double (Float) type and a matrix ==============
-    return 1 if an error and raise exception */ 
+    return 1 if an error and raise exception */
 int  not_doublematrix(PyArrayObject *mat)  {
   if (mat->descr->type_num != NPY_DOUBLE || mat->nd != 2)  {
     PyErr_SetString(PyExc_ValueError,
@@ -55,7 +55,7 @@ int  not_doublematrix(PyArrayObject *mat)  {
 //taken from C_arraytest.c in Scipy.
 
 /* ==== Check that PyArrayObject is a double (Float) type and a vector ==============
-    return 1 if an error and raise exception */ 
+    return 1 if an error and raise exception */
 int  not_doublevector(PyArrayObject *mat)  {
   if (mat->descr->type_num != NPY_DOUBLE || mat->nd != 1)  {
     PyErr_SetString(PyExc_ValueError,
@@ -71,14 +71,14 @@ static PyObject *matcher2(PyObject *self, PyObject* args)
   PyArrayObject *gatoms, *gcell, *uatoms, *ucell;
   int adjdens;
   int nostore;
-  
+
   /* Parse tuples separately since args will differ between C fcns */
   if (!PyArg_ParseTuple(args, "O!O!O!O!ii",
-			&PyArray_Type, &gatoms,
-			&PyArray_Type, &gcell,
-			&PyArray_Type, &uatoms,
-			&PyArray_Type, &ucell,
-			&adjdens,
+                        &PyArray_Type, &gatoms,
+                        &PyArray_Type, &gcell,
+                        &PyArray_Type, &uatoms,
+                        &PyArray_Type, &ucell,
+                        &adjdens,
                         &nostore)) return NULL;
   if (NULL == gatoms) return NULL;
   if (NULL == gcell)  return NULL;
@@ -115,13 +115,13 @@ static PyObject *matcher2(PyObject *self, PyObject* args)
       PyTuple_SetItem(mat,i,Py_BuildValue("f",s->mat[i]));
     }
     PyTuple_SetItem(result,
-		    nmatches,
-		    Py_BuildValue("(fiiOO)",
-				  s->rmsd,
-				  s->gcenter,
-				  s->ucenter,
-				  mat,
-				  list));
+                    nmatches,
+                    Py_BuildValue("(fiiOO)",
+                                  s->rmsd,
+                                  s->gcenter,
+                                  s->ucenter,
+                                  mat,
+                                  list));
     matches = s->next;
     free(s);
   }

@@ -104,7 +104,7 @@ double dot(double* x, double* y)
   return sum;
 }
 
-  
+
 double vector_length(double x[3])
 {
   return sqrt(dot(x,x));
@@ -123,9 +123,9 @@ sub(double*x, double* y, double* z)
 
 
 void
-MakeNeighborList(int natoms, int npairs, int* pairs, 
-		 //return values
-		 bnode** nei)
+MakeNeighborList(int natoms, int npairs, int* pairs,
+                 //return values
+                 bnode** nei)
 {
   //make neighborlist
   for(int i=0;i<natoms; i++){
@@ -142,9 +142,9 @@ MakeNeighborList(int natoms, int npairs, int* pairs,
 
 //for hetero pairs
 void
-MakeNeighborList_hetero(int natoms, int npairs, int* pairs, 
-		 //return values
-		 bnode** nei)
+MakeNeighborList_hetero(int natoms, int npairs, int* pairs,
+                 //return values
+                 bnode** nei)
 {
   //make neighborlist
   for(int i=0;i<natoms; i++){

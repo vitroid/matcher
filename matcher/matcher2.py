@@ -12,7 +12,7 @@ from collections import defaultdict
 import itertools as it
 from matcher import cmatcher2
 
-#note: this is modified. do not reuse.
+#Read the position of Oxygens
 def LoadGRO(file, rel=False):
     line = file.readline()
     natom = int(file.readline())
@@ -21,7 +21,8 @@ def LoadGRO(file, rel=False):
         line = file.readline()
         cols = line[20:].split()[:3]
         xyz = [float(x) for x in cols]
-        if " O" in line:
+        atomname = line[10:15].replace(' ', '')
+        if atomname[0] == "O":
             Os.append(xyz)
     Os = np.array(Os) #in nm
     #the last line is cell shape
@@ -91,6 +92,15 @@ def matcher2_python(gatoms, gcell, uatoms, ucell, adjdens=True, nostore=True):
     logger = logging.getLogger()
     ng = len(gatoms)
     nu = len(uatoms)
+
+    if adjdens:
+        gdens = ng / np.product(gcell)
+        udens = nu / np.product(ucell)
+        ratio = (udens/gdens)**(1./3.)
+        logger.info(f"Scale correction: {ratio}")
+        ucell *= ratio
+
+
     #uRは単位胞の外接球の半径
     uR = np.sum(ucell)/2.0
     #rproxは近接距離。グリッドのサイズ
@@ -99,7 +109,7 @@ def matcher2_python(gatoms, gcell, uatoms, ucell, adjdens=True, nostore=True):
     ucenter = 0
     matches = []
     for gcenter in range(ng):
-        if int(gcenter*100//ng) != int((gcenter-1)*100/ng):
+        if int(gcenter*20//ng) != int((gcenter-1)*20/ng):
             logger.info("Progress {0}%".format(int(gcenter*100//ng)))
         # それらの点を原点に平行移動する。
         sgatoms = gatoms - gatoms[gcenter]
@@ -128,7 +138,7 @@ def matcher2_python(gatoms, gcell, uatoms, ucell, adjdens=True, nostore=True):
                 #次のuはソートされたリストから選ぶ。
                 uv = suatoms[uorder[0:N+1]]
                 #gは近接点のなかからさがす。重複してもよい。
-                uvRt = np.dot(uv[N],R)+t
+                uvRt = uv[N] @ R + t
                 nearest, dmin = find_nearest(uvRt, rprox, addressbook, sgatoms)
                 #print(nearest, dmin)
                 glist.append(nearest)
@@ -136,8 +146,8 @@ def matcher2_python(gatoms, gcell, uatoms, ucell, adjdens=True, nostore=True):
                 #uvをRだけ回転しtだけ並進するとgvに重なる。
                 R,t,rmsd = rot_trans(uv,gv)
                 # print("#",gcenter,rmsd)
-                if rmsd > 0.1:
-                    break
+                # if rmsd > 0.1:
+                #     break
             if rmsd < 0.1:
                 corr = [0]*nu
                 for i in range(nu):
@@ -158,11 +168,15 @@ def main():
                         format="%(levelname)s %(message)s")
     gcell, gatoms = LoadGRO(open(sys.argv[1]), rel=True)
     ucell, uatoms = LoadGRO(open(sys.argv[2]), rel=True)
+    logger = logging.getLogger()
+    ng = len(gatoms)
+    nu = len(uatoms)
+    logger.info([ng, nu])
     if len(sys.argv) > 3 and sys.argv[3] == "py":
         match_iter = matcher2_python(gatoms, gcell, uatoms, ucell, adjdens=True, nostore=True)
     else:
         match_iter = cmatcher2.matcher2(gatoms, gcell, uatoms, ucell, True, True)
-        
+
     for match in match_iter:
         rmsd, gcenter, ucenter, R, corr = match
         print("{0:.5f}".format(rmsd), gcenter, ucenter, end=" ")
@@ -170,11 +184,11 @@ def main():
             for j in range(3):
                 print("{0:.5f}".format(R[i,j]), end=" ")
         print(len(corr), corr)
-        
+
 def hook1(lattice):
     """
     Slide and match. A format plugin for GenIce.
-    
+
     usage: genice 7 -f smatcher[radius:rmsdmax]
 
     matcher plugin accepts several parameters:
@@ -195,14 +209,14 @@ def hook1(lattice):
     matches = cmatcher2.matcher2(gatoms, gcell, lattice.uatoms, lattice.ucell, adjdens, nostore)
     lattice.logger.info("Hook1: end.")
 
-    
+
 
 def hook0(lattice, arg):
     args = arg.split(":")
     lattice.ucell, lattice.uatoms = LoadGRO(open(args[0]), rel=True)
 
 hooks={0:hook0, 1:hook1}
-        
+
 def test():
     H = np.array([2.0, 3.0, 5.0, 1.0, 4.0, 2.0, 3.0, 5.0, 1.0]).reshape((3,3))
     U,S,Vt = np.linalg.svd(H)
@@ -215,6 +229,6 @@ def test():
     print("R")
     print(R)
 
-    
+
 if __name__ == "__main__":
     main()

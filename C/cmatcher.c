@@ -45,24 +45,24 @@ PyMODINIT_FUNC PyInit_cmatcher(void) {
 //taken from C_arraytest.c in Scipy.
 
 /* ==== Check that PyArrayObject is a double (Float) type and a matrix ==============
-    return 1 if an error and raise exception */ 
+    return 1 if an error and raise exception */
 int  not_doublematrix(PyArrayObject *mat)  {
-	if (mat->descr->type_num != NPY_DOUBLE || mat->nd != 2)  {
-		PyErr_SetString(PyExc_ValueError,
-			"In not_doublematrix: array must be of type Float and 2 dimensional (n x m).");
-		return 1;  }
-	return 0;
+        if (mat->descr->type_num != NPY_DOUBLE || mat->nd != 2)  {
+                PyErr_SetString(PyExc_ValueError,
+                        "In not_doublematrix: array must be of type Float and 2 dimensional (n x m).");
+                return 1;  }
+        return 0;
 }
 //taken from C_arraytest.c in Scipy.
 
 /* ==== Check that PyArrayObject is a double (Float) type and a vector ==============
-    return 1 if an error and raise exception */ 
+    return 1 if an error and raise exception */
 int  not_doublevector(PyArrayObject *mat)  {
-	if (mat->descr->type_num != NPY_DOUBLE || mat->nd != 1)  {
-		PyErr_SetString(PyExc_ValueError,
-			"In not_doublevector: array must be of type Float and 1 dimensional (n).");
-		return 1;  }
-	return 0;
+        if (mat->descr->type_num != NPY_DOUBLE || mat->nd != 1)  {
+                PyErr_SetString(PyExc_ValueError,
+                        "In not_doublevector: array must be of type Float and 1 dimensional (n).");
+                return 1;  }
+        return 0;
 }
 
 
@@ -71,14 +71,14 @@ static PyObject *matcher(PyObject *self, PyObject* args) {
   PyArrayObject *pos, *cell, *unitatoms, *unitcell;
   float err, rprox;
   int adjdens;
-  
+
   /* Parse tuples separately since args will differ between C fcns */
   if (!PyArg_ParseTuple(args, "O!O!O!O!ffi",
-			&PyArray_Type, &pos,
-			&PyArray_Type, &cell,
-			&PyArray_Type, &unitatoms,
-			&PyArray_Type, &unitcell,
-			&err, &rprox, &adjdens)) return NULL;
+                        &PyArray_Type, &pos,
+                        &PyArray_Type, &cell,
+                        &PyArray_Type, &unitatoms,
+                        &PyArray_Type, &unitcell,
+                        &err, &rprox, &adjdens)) return NULL;
   if (NULL == pos) return NULL;
   if (NULL == cell) return NULL;
   if (NULL == unitatoms) return NULL;
@@ -115,18 +115,16 @@ static PyObject *matcher(PyObject *self, PyObject* args) {
       PyTuple_SetItem(mat,i,Py_BuildValue("f",s->mat[i]));
     }
     PyTuple_SetItem(result,
-		    nmatch,
-		    Py_BuildValue("(fiiOO)",
-				  s->rmsd,
-				  s->atom_gro,
-				  s->atom_unitcell,
-				  mat,
-				  list)
-		    );
+                    nmatch,
+                    Py_BuildValue("(fiiOO)",
+                                  s->rmsd,
+                                  s->atom_gro,
+                                  s->atom_unitcell,
+                                  mat,
+                                  list)
+                    );
     match = s->next;
     free(s);
   }
   return result;
 }
-
-

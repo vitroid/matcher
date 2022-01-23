@@ -26,7 +26,7 @@ int smatch_len(smatchtype* s)
 smatchtype* smatcher_core(int nOatoms, double* Oatoms, double* cell, double radius, double rmsdmax, int every)
 {
   smatchtype* smatch=NULL;
-  
+
   int* prox;
   //atoms of the proximity
   fprintf(stderr, "Preparing the neighbor lists...\n");
@@ -51,38 +51,38 @@ smatchtype* smatcher_core(int nOatoms, double* Oatoms, double* cell, double radi
       double sumsqdev = 0.0;
       //fprintf(stderr, "%d\n", size(nei[q]));
       for(int ip=0; ip<size(nei[p]); ip++){
-	double dmin = 1e99;
-	int pn = pnei[ip];
-	for(int iq=0; iq<size(nei[q]); iq++){
-	  int qn = qnei[iq];
-	  double dd[3];
-	  sub(&Oatoms[qn*3], &Oatoms[pn*3], dd);
-	  sub(dd, d, dd);
+        double dmin = 1e99;
+        int pn = pnei[ip];
+        for(int iq=0; iq<size(nei[q]); iq++){
+          int qn = qnei[iq];
+          double dd[3];
+          sub(&Oatoms[qn*3], &Oatoms[pn*3], dd);
+          sub(dd, d, dd);
           for(int d=0;d<3;d++){
             dd[d] -= floor(dd[d]/cell[d]+0.5)*cell[d];
           }
-	  double L = dot(dd,dd);
-	  if ( L < dmin ){
-	    dmin = L;
-	  }
-	}
-	sumsqdev += dmin;
+          double L = dot(dd,dd);
+          if ( L < dmin ){
+            dmin = L;
+          }
+        }
+        sumsqdev += dmin;
       }
       free(qnei);
       double msd = sumsqdev / size(nei[p]); //msd in nm**2
       double rmsd = sqrt(msd);
       if ( rmsd < rmsdmax ){
-	//fprintf(stderr, "%d %d\n", p,q);
-	smatchtype* s = (smatchtype*) malloc(sizeof(smatchtype));
-	s->next = smatch;
-	s->i = p;
-	s->j = q;
-	s->radius = radius;
-	s->d[0] = d[0];
-	s->d[1] = d[1];
-	s->d[2] = d[2];
-	s->rmsd = rmsd;
-	smatch = s;
+        //fprintf(stderr, "%d %d\n", p,q);
+        smatchtype* s = (smatchtype*) malloc(sizeof(smatchtype));
+        s->next = smatch;
+        s->i = p;
+        s->j = q;
+        s->radius = radius;
+        s->d[0] = d[0];
+        s->d[1] = d[1];
+        s->d[2] = d[2];
+        s->rmsd = rmsd;
+        smatch = s;
       }
       //return smatch;
     }
@@ -145,7 +145,3 @@ int main(int argc, char* argv[])
     free(s);
   }
 }
-
-
-
-

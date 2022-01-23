@@ -66,7 +66,7 @@ rot_trans(int nv, double uv[], double gv[], double R[9], double t[3])
     for(int k=0; k<3; k++){
       H[j*3+k] = 0.0;
       for(int i=0; i<nv; i++){
-	H[j*3+k] += (uv[i*3+j]-ucom[j])*(gv[i*3+k]-gcom[k]);
+        H[j*3+k] += (uv[i*3+j]-ucom[j])*(gv[i*3+k]-gcom[k]);
       }
     }
   }
@@ -114,11 +114,11 @@ void quick_proximity(int n, int* order, double* distance, int ntop)
     fprintf(stderr, "H%d T%d %d\n", head,tail,ntop);
     for(int i=0;i<n;i++){
       if ( i == head )
-	fprintf(stderr, "H");
+        fprintf(stderr, "H");
       if ( i == tail )
-	fprintf(stderr, "T");
+        fprintf(stderr, "T");
       if ( i == pivot )
-	fprintf(stderr, "P");
+        fprintf(stderr, "P");
       fprintf(stderr, "%f ", distance[order[i]]);
     }
     fprintf(stderr, "\n");
@@ -134,11 +134,11 @@ void quick_proximity(int n, int* order, double* distance, int ntop)
     fprintf(stderr, "H%d T%d %d\n", head,tail,ntop);
     for(int i=0;i<n;i++){
       if ( i == head )
-	fprintf(stderr, "H");
+        fprintf(stderr, "H");
       if ( i == tail )
-	fprintf(stderr, "T");
+        fprintf(stderr, "T");
       if ( i == pivot )
-	fprintf(stderr, "P");
+        fprintf(stderr, "P");
       fprintf(stderr, "%f ", distance[order[i]]);
     }
     fprintf(stderr, "\n\n");
@@ -157,7 +157,7 @@ void quick_proximity(int n, int* order, double* distance, int ntop)
   quick_proximity(n-tail-1, &order[tail+1], distance, 0);
   */
 }
-  
+
 
 
 
@@ -187,7 +187,7 @@ void quick_sort(int n, int* order, double* distance)
   quick_sort(head, order, distance);
   quick_sort(n-tail-1, &order[tail+1], distance);
 }
-  
+
 
 
 
@@ -230,18 +230,18 @@ matcher2_core(int ngatoms,
     double sgratoms[ngatoms*3];
     for(int i=0;i<ngatoms; i++){
       for(int d=0;d<3;d++){
-	double x = gatoms[i*3+d] - gatoms[gcenter*3+d];
-	x -= floor(x+0.5);
-	sgratoms[i*3+d] = x;
-	sgatoms[i*3+d] = x*gcell[d];
+        double x = gatoms[i*3+d] - gatoms[gcenter*3+d];
+        x -= floor(x+0.5);
+        sgratoms[i*3+d] = x;
+        sgatoms[i*3+d] = x*gcell[d];
       }
     }
     double suatoms[nuatoms*3];
     for(int i=0;i<nuatoms; i++){
       for(int d=0;d<3;d++){
-	double x = uatoms[i*3+d] - uatoms[ucenter*3+d];
-	x -= floor(x+0.5);
-	suatoms[i*3+d] = x*ucell[d];
+        double x = uatoms[i*3+d] - uatoms[ucenter*3+d];
+        x -= floor(x+0.5);
+        suatoms[i*3+d] = x*ucell[d];
       }
     }
     // 住所録を作る
@@ -260,8 +260,8 @@ matcher2_core(int ngatoms,
       int j = gorig[i];
       double sum=0.0;
       for(int d=0; d<3; d++){
-	double x = sgatoms[j*3+d];
-	sum += x*x;
+        double x = sgatoms[j*3+d];
+        sum += x*x;
       }
       distance[i] = sum;
     }
@@ -284,8 +284,8 @@ matcher2_core(int ngatoms,
     for(int i=0; i<nuatoms; i++){
       double sum=0.0;
       for(int d=0; d<3; d++){
-	double x = suatoms[i*3+d];
-	sum += x*x;
+        double x = suatoms[i*3+d];
+        sum += x*x;
       }
       udistance[i] = sum;
     }
@@ -305,66 +305,66 @@ matcher2_core(int ngatoms,
     for(int mi=1; mi<5; mi++){
       int ni = gorder[mi];
       for(int mj=1; mj<5; mj++){
-	int nj = gorder[mj];
-	if ( ni != nj ){
-	  for(int mk=1; mk<5; mk++){
-	    int nk = gorder[mk];
-	    if ( ( ni != nk ) && ( nj != nk ) ){
-	      int glist[nuatoms];
-	      glist[0] = gcenter;
-	      glist[1] = ni;
-	      glist[2] = nj;
-	      glist[3] = nk;
-	      // その状態で並進と回転を最適化する。
-	      double uv[nuatoms*3];
-	      double gv[nuatoms*3];
-	      int nv = 4;
-	      for(int i=0;i<nv;i++){
-		for(int d=0;d<3;d++){
-		  uv[i*3+d] = suatoms[uorder[i]*3+d];
-		  gv[i*3+d] = sgatoms[glist[i]*3+d];
-		}
-	      }
-	      double R[9], t[3];
-	      // uvをRだけ回転しtだけ並進するとgvに重なる。
-	      double rmsd = rot_trans(nv, uv, gv, R, t);
-	      //printf("%d %f\n", nv,rmsd);
-	      // 粒子を1つ増やす。
-	      for(; nv<nuatoms; nv++){
-		if ( rmsd > 0.1 )
-		  break;
-		// 次のuはソートされたリストから選ぶ。
-		//abs
-		for(int d=0;d<3;d++){
-		  uv[nv*3+d] = suatoms[uorder[nv]*3+d];
-		}
-		// gは近接点のなかからさがす。重複してもよい。
-		double uvRt[3];
-		multiply(1,3,3,&uv[nv*3], R, uvRt);
-		for(int d=0;d<3;d++){
-		  uvRt[d] += t[d];
-		  uvRt[d] /= gcell[d]; //abs to rel
-		}
-		int nearest = find_nearest(uvRt, abook, gcell, sgratoms);
-		/*
-		  printf("%f %f %f\n", uvRt[0], uvRt[1], uvRt[2]);
-		  printf("%f %f %f\n",
-		  sgratoms[nearest*3+0],
-		  sgratoms[nearest*3+1],
-		  sgratoms[nearest*3+2]);
-		*/
-		glist[nv] = nearest;
-		for(int d=0;d<3;d++){
-		  gv[nv*3+d] = sgatoms[nearest*3+d];
-		}
-		// uvをRだけ回転しtだけ並進するとgvに重なる。
-		rmsd = rot_trans(nv+1, uv, gv, R, t);
+        int nj = gorder[mj];
+        if ( ni != nj ){
+          for(int mk=1; mk<5; mk++){
+            int nk = gorder[mk];
+            if ( ( ni != nk ) && ( nj != nk ) ){
+              int glist[nuatoms];
+              glist[0] = gcenter;
+              glist[1] = ni;
+              glist[2] = nj;
+              glist[3] = nk;
+              // その状態で並進と回転を最適化する。
+              double uv[nuatoms*3];
+              double gv[nuatoms*3];
+              int nv = 4;
+              for(int i=0;i<nv;i++){
+                for(int d=0;d<3;d++){
+                  uv[i*3+d] = suatoms[uorder[i]*3+d];
+                  gv[i*3+d] = sgatoms[glist[i]*3+d];
+                }
+              }
+              double R[9], t[3];
+              // uvをRだけ回転しtだけ並進するとgvに重なる。
+              double rmsd = rot_trans(nv, uv, gv, R, t);
+              //printf("%d %f\n", nv,rmsd);
+              // 粒子を1つ増やす。
+              for(; nv<nuatoms; nv++){
+                if ( rmsd > 0.1 )
+                  break;
+                // 次のuはソートされたリストから選ぶ。
+                //abs
+                for(int d=0;d<3;d++){
+                  uv[nv*3+d] = suatoms[uorder[nv]*3+d];
+                }
+                // gは近接点のなかからさがす。重複してもよい。
+                double uvRt[3];
+                multiply(1,3,3,&uv[nv*3], R, uvRt);
+                for(int d=0;d<3;d++){
+                  uvRt[d] += t[d];
+                  uvRt[d] /= gcell[d]; //abs to rel
+                }
+                int nearest = find_nearest(uvRt, abook, gcell, sgratoms);
+                /*
+                  printf("%f %f %f\n", uvRt[0], uvRt[1], uvRt[2]);
+                  printf("%f %f %f\n",
+                  sgratoms[nearest*3+0],
+                  sgratoms[nearest*3+1],
+                  sgratoms[nearest*3+2]);
+                */
+                glist[nv] = nearest;
+                for(int d=0;d<3;d++){
+                  gv[nv*3+d] = sgatoms[nearest*3+d];
+                }
+                // uvをRだけ回転しtだけ並進するとgvに重なる。
+                rmsd = rot_trans(nv+1, uv, gv, R, t);
                 if (rmsd > 0.1 ){
                   break;
                 }
-		//printf("%d %d %f\n", nv+1, nearest, rmsd);
-	      } //for nv
-	      if ( rmsd < 0.1 ){
+                //printf("%d %d %f\n", nv+1, nearest, rmsd);
+              } //for nv
+              if ( rmsd < 0.1 ){
                 if ( nostore ){
                   printf("%f %d %d ", rmsd, gcenter, ucenter);
                   for(int i=0; i<9; i++){
@@ -402,13 +402,13 @@ matcher2_core(int ngatoms,
                   ma->next = matches;
                   matches = ma;
                 }
-	      } //if rmsd
-	    } // if
-	  } //for mk
-	}// if
+              } //if rmsd
+            } // if
+          } //for mk
+        }// if
       }//for mj
     }//for mi
-    
+
     dispose_addressbook(abook);
   }//for gcenter;
   //no return value
@@ -441,7 +441,7 @@ int main(int argc, char *argv[]){
   matcher2_core(ngatoms, gatoms, gcell, nuatoms, uatoms, ucell, adjdens, nostore);
 }
 
-  
+
 
 
 void
@@ -476,7 +476,3 @@ test(int argc, char *argv[]){
     printf("\n");
   }
 }
-  
-  
-      
-  

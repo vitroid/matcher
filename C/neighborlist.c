@@ -19,7 +19,7 @@ init_addressbook(int grid[3])
   abook->residents  = (int**) malloc(sizeof(int*)*ngrid);
   return abook;
 }
-  
+
 void
 dispose_addressbook(sAddressBook* abook)
 {
@@ -48,8 +48,8 @@ returns the list of residents in the addressbook near addr.
     for(int j=-1; j<2; j++){
       int jj = (j + district[1] + GY) % GY;
       for(int k=-1; k<2; k++){
-	int kk = (k + district[2] + GZ) % GZ;
-	nnei += abook->nresidents[ADDRESS(ii,jj,kk)];
+        int kk = (k + district[2] + GZ) % GZ;
+        nnei += abook->nresidents[ADDRESS(ii,jj,kk)];
       }
     }
   }
@@ -60,11 +60,11 @@ returns the list of residents in the addressbook near addr.
     for(int j=-1; j<2; j++){
       int jj = (j + district[1] + GY) % GY;
       for(int k=-1; k<2; k++){
-	int kk = (k + district[2] + GZ) % GZ;
-	for(int l=0;l<abook->nresidents[ADDRESS(ii,jj,kk)]; l++){
-	  (*residents)[nnei2] = abook->residents[ADDRESS(ii,jj,kk)][l];
-	  nnei2++;
-	}
+        int kk = (k + district[2] + GZ) % GZ;
+        for(int l=0;l<abook->nresidents[ADDRESS(ii,jj,kk)]; l++){
+          (*residents)[nnei2] = abook->residents[ADDRESS(ii,jj,kk)][l];
+          nnei2++;
+        }
       }
     }
   }
@@ -89,8 +89,8 @@ returns the list of residents in the addressbook near the origin.
     for(int j=-1; j<1; j++){
       int jj = (j + GY) % GY;
       for(int k=-1; k<1; k++){
-	int kk = (k + GZ) % GZ;
-	nnei += abook->nresidents[ADDRESS(ii,jj,kk)];
+        int kk = (k + GZ) % GZ;
+        nnei += abook->nresidents[ADDRESS(ii,jj,kk)];
       }
     }
   }
@@ -101,11 +101,11 @@ returns the list of residents in the addressbook near the origin.
     for(int j=-1; j<1; j++){
       int jj = (j + GY) % GY;
       for(int k=-1; k<1; k++){
-	int kk = (k + GZ) % GZ;
-	for(int l=0;l<abook->nresidents[ADDRESS(ii,jj,kk)]; l++){
-	  (*residents)[nnei] = abook->residents[ADDRESS(ii,jj,kk)][l];
-	  nnei++;
-	}
+        int kk = (k + GZ) % GZ;
+        for(int l=0;l<abook->nresidents[ADDRESS(ii,jj,kk)]; l++){
+          (*residents)[nnei] = abook->residents[ADDRESS(ii,jj,kk)][l];
+          nnei++;
+        }
       }
     }
   }
@@ -128,7 +128,7 @@ sAddressBook* AddressBook(int grid[3], int npos, double* rpos)
       double x = rpos[i*3+d];
       addr[d] = (int)(floor(x*grid[d]));
       if ( addr[d] < 0 ){
-	addr[d] += grid[d];
+        addr[d] += grid[d];
       }
     }
     abook->nresidents[ADDRESS(addr[0], addr[1], addr[2])] ++;
@@ -145,7 +145,7 @@ sAddressBook* AddressBook(int grid[3], int npos, double* rpos)
       double x = rpos[i*3+d];
       addr[d] = (int)(floor(x*grid[d]));
       if ( addr[d] < 0 ){
-	addr[d] += grid[d];
+        addr[d] += grid[d];
       }
     }
     int n = abook->nresidents[ADDRESS(addr[0], addr[1], addr[2])];
@@ -155,8 +155,8 @@ sAddressBook* AddressBook(int grid[3], int npos, double* rpos)
   return abook;
 }
 
-  
-    
+
+
 int find_nearest(double rloc[3], sAddressBook* abook, double cell[3], double rpos[])
 /*
   find the nearest atom near rloc.
@@ -196,5 +196,3 @@ int find_nearest(double rloc[3], sAddressBook* abook, double cell[3], double rpo
   //fprintf(stderr, "jmin %d\n", jmin);
   return jmin;
 }
-
-  
