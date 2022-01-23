@@ -37,7 +37,7 @@ def direction2color(v, digitize=4):
     return R,G,B
 
 
-def drawbox(origin, box, halfshift=True):
+def drawbox(origin, box, halfshift=True, diag=False):
     s = ""
     if halfshift:
         center = (box[0] + box[1] + box[2])/2
@@ -50,6 +50,8 @@ def drawbox(origin, box, halfshift=True):
         s += yp.Line(v+ori, v+ori+box[1])
     for v in (np.zeros(3), box[0], box[1], box[0]+box[1]):
         s += yp.Line(v+ori, v+ori+box[2])
+    if diag:
+        s += yp.Line(ori, ori+box[0]+box[1]+box[2])
     return s
 
 def drawbox2(origin, box):
@@ -177,7 +179,7 @@ def main():
             s += yp.Color(palette[color])
             # matched box
             s += yp.Layer(4)
-            s += drawbox(gcenter,Rotucell,halfshift=True)
+            s += drawbox(gcenter,Rotucell,halfshift=True, diag=(mode=="R"))
             # s += yp.Layer(2)
             # # unit cell
             # s += drawbox(Boxslide,Rotucell,halfshift=True)
