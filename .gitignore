@@ -24,3 +24,5 @@ slide-matcher2
 matcher\.egg-info/
 
 *.pyc
+build/
+*.egg-info/

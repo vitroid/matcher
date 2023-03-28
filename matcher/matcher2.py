@@ -166,6 +166,11 @@ def matcher2_python(gatoms, gcell, uatoms, ucell, adjdens=True, nostore=True):
 def main():
     logging.basicConfig(level=logging.INFO,
                         format="%(levelname)s %(message)s")
+    adjdens = True
+    if sys.argv[1][0] == "-":
+        option = sys.argv.pop(1)
+        if option == "--no-density-adjust":
+            adjdens = False
     gcell, gatoms = LoadGRO(open(sys.argv[1]), rel=True)
     ucell, uatoms = LoadGRO(open(sys.argv[2]), rel=True)
     logger = logging.getLogger()
@@ -173,9 +178,9 @@ def main():
     nu = len(uatoms)
     logger.info([ng, nu])
     if len(sys.argv) > 3 and sys.argv[3] == "py":
-        match_iter = matcher2_python(gatoms, gcell, uatoms, ucell, adjdens=True, nostore=True)
+        match_iter = matcher2_python(gatoms, gcell, uatoms, ucell, adjdens=adjdens, nostore=True)
     else:
-        match_iter = cmatcher2.matcher2(gatoms, gcell, uatoms, ucell, True, True)
+        match_iter = cmatcher2.matcher2(gatoms, gcell, uatoms, ucell, adjdens=adjdens, nostore=True)
 
     for match in match_iter:
         rmsd, gcenter, ucenter, R, corr = match
