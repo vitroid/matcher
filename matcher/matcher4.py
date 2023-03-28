@@ -64,7 +64,7 @@ def find_nearest(pos, rprox, addressbook, points):
 
 
 
-def matcher4(gatoms, gcell, uatoms, rc=0.35*1.2, rmsd_max=0.1):
+def match_iter(gatoms, gcell, uatoms, rc=0.35*1.2, rmsd_max=0.1):
     """
     gatoms: マッチされる点雲、セル内相対座標
     uatoms: テンプレートの点雲絶対座標, in nm
